@@ -1,4 +1,5 @@
 #include "VividManager.h"
+#include "AutostartManager.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -7,7 +8,6 @@
 #include <thread>
 #include <chrono>
 #include <regex>
-#include "AutostartManager.h"
 
 #ifdef HAVE_X11
 #include <X11/Xlib.h>
@@ -150,7 +150,6 @@ bool VividManager::setAMDVibrance(const std::string& displayId, float vibrance) 
     }
 }
 
-// Rest of the implementation remains the same as before...
 bool VividManager::tryAMDColorProperties() {
     std::cout << "  Checking for AMD GPU..." << std::endl;
     
@@ -250,7 +249,6 @@ void VividManager::detectDisplays() {
     std::cout << "    Total displays: " << m_displays.size() << std::endl;
 }
 
-// Implement remaining methods...
 std::vector<VividDisplay> VividManager::getDisplays() {
     return m_displays;
 }
@@ -356,7 +354,38 @@ std::string VividManager::getConfigPath() {
     return home + "/.config/vivid/profiles.conf";
 }
 
-void VividManager::setMonitoringEnabled(bool
+void VividManager::setMonitoringEnabled(bool enabled) {
+    if (enabled && !m_monitoringEnabled) {
+        startApplicationMonitoring();
+    } else if (!enabled && m_monitoringEnabled) {
+        stopApplicationMonitoring();
+    }
+    m_monitoringEnabled = enabled;
+}
+
+void VividManager::startApplicationMonitoring() {
+    m_monitoringEnabled = true;
+    std::thread([this]() {
+        while (m_monitoringEnabled) {
+            checkActiveApplication();
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }).detach();
+}
+
+void VividManager::stopApplicationMonitoring() {
+    m_monitoringEnabled = false;
+}
+
+void VividManager::checkActiveApplication() {
+    // Application monitoring implementation
+}
+
+std::string VividManager::getCurrentActiveWindow() {
+    return "";
+}
+
+// Autostart functionality
 bool VividManager::isAutostartEnabled() {
     return m_autostartManager->isEnabled();
 }

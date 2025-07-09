@@ -5,6 +5,9 @@
 #include <string>
 #include <map>
 
+// Forward declaration
+class AutostartManager;
+
 struct VividDisplay {
     std::string id;
     std::string name;
@@ -74,6 +77,9 @@ private:
     std::map<std::string, float> m_baseVibrance;
     std::map<std::string, float> m_originalVibrance; // Store original values for safety
     
+    // Autostart manager
+    std::unique_ptr<AutostartManager> m_autostartManager;
+    
     // Detection methods
     bool tryAMDColorProperties();
     bool tryAMDXrandrFallback();
@@ -95,9 +101,4 @@ private:
     void checkActiveApplication();
     std::string getCurrentActiveWindow();
     void applyProfileForApp(const std::string& appName, const std::string& windowTitle);
-
-    // Autostart helpers
-    std::string getAutostartFilePath();
-    std::string getDesktopFileContent();
-    bool createAutostartDirectory();
 };

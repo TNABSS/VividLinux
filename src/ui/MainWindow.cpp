@@ -321,9 +321,6 @@ void MainWindow::setupDisplayTab(const VividDisplay& display) {
     gtk_label_set_markup(GTK_LABEL(vibranceLabel), "<b>🎨 Digital Vibrance Control</b>");
     gtk_widget_set_halign(vibranceLabel, GTK_ALIGN_START);
     
-    // Control container
-    GtkWidget* controlContainer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
-    
     // Current value display
     GtkWidget* valueDisplay = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
     gtk_widget_set_halign(valueDisplay, GTK_ALIGN_CENTER);
@@ -586,30 +583,29 @@ void MainWindow::onPresetClicked(GtkButton* button, gpointer user_data) {
 void MainWindow::onResetAllClicked(GtkButton* button __attribute__((unused)), gpointer user_data) {
     auto* window = static_cast<MainWindow*>(user_data);
     
-    // Show confirmation dialog
-    GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(window->m_window),
-        GTK_DIALOG_MODAL,
-        GTK_MESSAGE_QUESTION,
-        GTK_BUTTONS_YES_NO,
-        "Reset all displays to normal vibrance?"
-    );
+    // Use modern GTK4 dialog approach
+    GtkAlertDialog* dialog = gtk_alert_dialog_new("Reset all displays to normal vibrance?");
+    gtk_alert_dialog_set_detail(dialog, "This will reset all displays to 0 vibrance (normal colors).");
+    gtk_alert_dialog_set_buttons(dialog, (const char*[]){"Cancel", "Reset", nullptr});
+    gtk_alert_dialog_set_cancel_button(dialog, 0);
+    gtk_alert_dialog_set_default_button(dialog, 1);
     
-    gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-        "This will reset all displays to 0 vibrance (normal colors).");
-    
-    int response = gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_window_destroy(GTK_WINDOW(dialog));
-    
-    if (response == GTK_RESPONSE_YES) {
-        // Reset all displays
-        for (const auto& pair : window->m_vibranceScales) {
-            gtk_range_set_value(GTK_RANGE(pair.second), 0.0);
-            window->m_manager->resetVibrance(pair.first);
-        }
-        
-        std::cout << "🔄 All displays reset to normal vibrance" << std::endl;
-    }
+    gtk_alert_dialog_choose(dialog, GTK_WINDOW(window->m_window), nullptr, 
+        [](GObject* source, GAsyncResult* result, gpointer user_data) {
+            auto* window = static_cast<MainWindow*>(user_data);
+            GtkAlertDialog* dialog = GTK_ALERT_DIALOG(source);
+            
+            int response = gtk_alert_dialog_choose_finish(dialog, result, nullptr);
+            if (response == 1) { // Reset button
+                // Reset all displays
+                for (const auto& pair : window->m_vibranceScales) {
+                    gtk_range_set_value(GTK_RANGE(pair.second), 0.0);
+                    window->m_manager->resetVibrance(pair.first);
+                }
+                std::cout << "🔄 All displays reset to normal vibrance" << std::endl;
+            }
+            g_object_unref(dialog);
+        }, window);
 }
 
 void MainWindow::onAddProgramClicked(GtkButton* button __attribute__((unused)), gpointer user_data) {
@@ -618,14 +614,9 @@ void MainWindow::onAddProgramClicked(GtkButton* button __attribute__((unused)), 
 }
 
 void MainWindow::showFileBrowserDialog() {
-    GtkWidget* dialog = gtk_file_chooser_dialog_new(
-        "Select Program to Add",
-        GTK_WINDOW(m_window),
-        GTK_FILE_CHOOSER_ACTION_OPEN,
-        "Cancel", GTK_RESPONSE_CANCEL,
-        "Add Program", GTK_RESPONSE_ACCEPT,
-        nullptr
-    );
+    // Use modern GTK4 file dialog
+    GtkFileDialog* dialog = gtk_file_dialog_new();
+    gtk_file_dialog_set_title(dialog, "Select Program to Add");
     
     // Set up file filters
     GtkFileFilter* executableFilter = gtk_file_filter_new();
@@ -633,32 +624,41 @@ void MainWindow::showFileBrowserDialog() {
     gtk_file_filter_add_mime_type(executableFilter, "application/x-executable");
     gtk_file_filter_add_pattern(executableFilter, "*.exe");
     gtk_file_filter_add_pattern(executableFilter, "*.AppImage");
-    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), executableFilter);
     
     GtkFileFilter* allFilter = gtk_file_filter_new();
     gtk_file_filter_set_name(allFilter, "All Files");
     gtk_file_filter_add_pattern(allFilter, "*");
-    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), allFilter);
     
-    // Set common directories
-    gtk_file_chooser_add_shortcut_folder(GTK_FILE_CHOOSER(dialog), "/usr/bin", nullptr);
-    gtk_file_chooser_add_shortcut_folder(GTK_FILE_CHOOSER(dialog), "/usr/local/bin", nullptr);
-    gtk_file_chooser_add_shortcut_folder(GTK_FILE_CHOOSER(dialog), g_get_home_dir(), nullptr);
+    GListStore* filters = g_list_store_new(GTK_TYPE_FILE_FILTER);
+    g_list_store_append(filters, executableFilter);
+    g_list_store_append(filters, allFilter);
+    gtk_file_dialog_set_filters(dialog, G_LIST_MODEL(filters));
     
-    // Show dialog
-    int response = gtk_dialog_run(GTK_DIALOG(dialog));
+    // Set initial folder to common executable locations
+    GFile* initialFolder = g_file_new_for_path("/usr/bin");
+    gtk_file_dialog_set_initial_folder(dialog, initialFolder);
+    g_object_unref(initialFolder);
     
-    if (response == GTK_RESPONSE_ACCEPT) {
-        GtkFileChooser* chooser = GTK_FILE_CHOOSER(dialog);
-        char* filename = gtk_file_chooser_get_filename(chooser);
-        
-        if (filename) {
-            showProgramConfigDialog(filename);
-            g_free(filename);
-        }
-    }
+    gtk_file_dialog_open(dialog, GTK_WINDOW(m_window), nullptr,
+        [](GObject* source, GAsyncResult* result, gpointer user_data) {
+            auto* window = static_cast<MainWindow*>(user_data);
+            GtkFileDialog* dialog = GTK_FILE_DIALOG(source);
+            
+            GFile* file = gtk_file_dialog_open_finish(dialog, result, nullptr);
+            if (file) {
+                char* path = g_file_get_path(file);
+                if (path) {
+                    window->showProgramConfigDialog(std::string(path));
+                    g_free(path);
+                }
+                g_object_unref(file);
+            }
+            g_object_unref(dialog);
+        }, this);
     
-    gtk_window_destroy(GTK_WINDOW(dialog));
+    g_object_unref(filters);
+    g_object_unref(executableFilter);
+    g_object_unref(allFilter);
 }
 
 void MainWindow::showProgramConfigDialog(const std::string& programPath) {
@@ -689,7 +689,10 @@ void MainWindow::showProgramConfigDialog(const std::string& programPath) {
     GtkWidget* nameBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget* nameLabel = gtk_label_new("Profile Name:");
     GtkWidget* nameEntry = gtk_entry_new();
-    gtk_entry_set_text(GTK_ENTRY(nameEntry), programName.c_str());
+    
+    // Use modern GTK4 entry buffer
+    GtkEntryBuffer* buffer = gtk_entry_buffer_new(programName.c_str(), -1);
+    gtk_entry_set_buffer(GTK_ENTRY(nameEntry), buffer);
     gtk_widget_set_hexpand(nameEntry, TRUE);
     
     gtk_box_append(GTK_BOX(nameBox), nameLabel);
@@ -761,6 +764,7 @@ void MainWindow::showProgramConfigDialog(const std::string& programPath) {
     g_signal_connect(saveButton, "clicked", G_CALLBACK(onSaveProgramProfile), nullptr);
     
     gtk_window_present(GTK_WINDOW(dialog));
+    g_object_unref(buffer);
 }
 
 void MainWindow::onSaveProgramProfile(GtkButton* button, gpointer user_data __attribute__((unused))) {
@@ -771,7 +775,10 @@ void MainWindow::onSaveProgramProfile(GtkButton* button, gpointer user_data __at
     
     if (programPath && nameEntry && window) {
         AppProfile profile;
-        profile.name = gtk_entry_get_text(nameEntry);
+        
+        // Get text from entry buffer
+        GtkEntryBuffer* buffer = gtk_entry_get_buffer(nameEntry);
+        profile.name = gtk_entry_buffer_get_text(buffer);
         profile.executable = programPath;
         profile.enabled = true;
         
@@ -855,21 +862,15 @@ void MainWindow::onAutostartToggled(GtkCheckButton* button, gpointer user_data) 
     window->updateAutostartStatus();
     
     if (success) {
-        // Show success notification
-        GtkWidget* dialog = gtk_message_dialog_new(
-            GTK_WINDOW(window->m_window),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            enabled ? "Autostart Enabled" : "Autostart Disabled"
-        );
+        // Show success notification using modern GTK4 dialog
+        GtkAlertDialog* dialog = gtk_alert_dialog_new(enabled ? "Autostart Enabled" : "Autostart Disabled");
+        gtk_alert_dialog_set_detail(dialog, enabled ? 
+            "Vivid will now start automatically when you log in." :
+            "Vivid will no longer start automatically.");
+        gtk_alert_dialog_set_buttons(dialog, (const char*[]){"OK", nullptr});
         
-        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
-            enabled ? "Vivid will now start automatically when you log in." :
-                     "Vivid will no longer start automatically.");
-        
-        gtk_dialog_run(GTK_DIALOG(dialog));
-        gtk_window_destroy(GTK_WINDOW(dialog));
+        gtk_alert_dialog_show(dialog, GTK_WINDOW(window->m_window));
+        g_object_unref(dialog);
     }
 }
 
@@ -910,7 +911,6 @@ void MainWindow::showAutostartDebugDialog() {
     gtk_widget_add_css_class(textView, "program-list");
     
     // Get debug info from autostart manager
-    // Note: This would need to be implemented in VividManager
     std::string debugInfo = "=== Autostart Debug Information ===\n\n";
     debugInfo += "Status: " + m_manager->getAutostartStatus() + "\n";
     debugInfo += "This feature provides detailed debugging information\n";
