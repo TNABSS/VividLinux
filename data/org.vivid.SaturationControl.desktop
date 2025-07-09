@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Vivid
+GenericName=Digital Vibrance Control
+Comment=Adjust screen vibrance and digital saturation for AMD GPUs
+Exec=vivid
+Icon=org.vivid.SaturationControl
+Terminal=false
+Categories=System;Settings;
+Keywords=vibrance;saturation;color;display;monitor;amd;
+StartupNotify=true

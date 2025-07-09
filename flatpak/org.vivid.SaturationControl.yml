@@ -1,0 +1,23 @@
+app-id: org.vivid.SaturationControl
+runtime: org.gnome.Platform
+runtime-version: '45'
+sdk: org.gnome.Sdk
+command: vivid
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri  # Required for GPU access
+  - --filesystem=~/.config/vivid:create
+  - --system-talk-name=org.freedesktop.DisplayManager
+
+modules:
+  - name: vivid
+    buildsystem: meson
+    sources:
+      - type: dir
+        path: ..
+    post-install:
+      - install -Dm644 data/org.vivid.SaturationControl.desktop /app/share/applications/org.vivid.SaturationControl.desktop
+      - install -Dm644 data/org.vivid.SaturationControl.metainfo.xml /app/share/metainfo/org.vivid.SaturationControl.metainfo.xml

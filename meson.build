@@ -6,19 +6,21 @@ project('vivid', 'cpp',
 gtk4_dep = dependency('gtk4')
 x11_dep = dependency('x11', required: false)
 xrandr_dep = dependency('xrandr', required: false)
+threads_dep = dependency('threads')
 
 # Source files
 sources = [
   'src/main.cpp',
-  'src/SaturationController.cpp',
-  'src/MainWindow.cpp'
+  'src/core/VividManager.cpp',
+  'src/ui/MainWindow.cpp',
+  'src/cli/CommandLineInterface.cpp'
 ]
 
 # Include directories
 inc = include_directories('src')
 
 # Dependencies list
-deps = [gtk4_dep]
+deps = [gtk4_dep, threads_dep]
 
 if x11_dep.found() and xrandr_dep.found()
   deps += [x11_dep, xrandr_dep]
@@ -34,6 +36,14 @@ executable('vivid',
   dependencies: deps,
   include_directories: inc,
   install: true)
+
+# Desktop file
+install_data('data/org.vivid.SaturationControl.desktop',
+  install_dir: get_option('datadir') / 'applications')
+
+# AppStream metadata
+install_data('data/org.vivid.SaturationControl.metainfo.xml',
+  install_dir: get_option('datadir') / 'metainfo')
 
 message('Build configured successfully!')
 message('Run: meson compile -C builddir')

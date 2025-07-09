@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.vivid.SaturationControl</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0+</project_license>
+  <name>Vivid</name>
+  <summary>Digital vibrance control for AMD GPUs on Linux</summary>
+  
+  <description>
+    <p>
+      Vivid provides precise digital vibrance control for AMD graphics cards on Linux,
+      similar to NVIDIA's digital vibrance feature. It offers both a modern GTK4 interface
+      and command-line tools for adjusting color saturation per display.
+    </p>
+    <p>Key Features:</p>
+    <ul>
+      <li>Real-time vibrance adjustment from -100 to +100</li>
+      <li>Per-application profiles with automatic switching</li>
+      <li>Multi-display support with independent control</li>
+      <li>AMD GPU hardware acceleration support</li>
+      <li>Dark theme interface matching modern design</li>
+      <li>Command-line interface for scripting</li>
+    </ul>
+  </description>
+  
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main application window showing vibrance controls</caption>
+      <image>https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-PwavWtMD1U96LC4xzEUYuOcWPPgZjS.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Program profile configuration dialog</caption>
+      <image>https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-qLfr6rUaQUNOCDNRcDlH4Gc2yRW22Y.png</image>
+    </screenshot>
+  </screenshots>
+  
+  <url type="homepage">https://github.com/vivid-project/vivid</url>
+  <url type="bugtracker">https://github.com/vivid-project/vivid/issues</url>
+  
+  <provides>
+    <binary>vivid</binary>
+  </provides>
+  
+  <releases>
+    <release version="1.0.0" date="2
