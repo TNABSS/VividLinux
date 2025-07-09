@@ -297,6 +297,21 @@ void MainWindow::applyAllSettings() {
 }
 
 // FIXED: Modern GTK4 dialogs without deprecated functions
+// FIXED: Proper GTK callback functions instead of lambdas
+static void on_cancel_clicked(GtkButton* button, gpointer user_data) {
+    gtk_window_destroy(GTK_WINDOW(user_data));
+}
+
+static void on_ok_clicked(GtkButton* button, gpointer user_data) {
+    auto* callbackPtr = static_cast<std::function<void()>*>(g_object_get_data(G_OBJECT(user_data), "callback"));
+    if (callbackPtr) (*callbackPtr)();
+    gtk_window_destroy(GTK_WINDOW(user_data));
+}
+
+static void on_info_ok_clicked(GtkButton* button, gpointer user_data) {
+    gtk_window_destroy(GTK_WINDOW(user_data));
+}
+
 void MainWindow::showConfirmDialog(const std::string& message, std::function<void()> callback) {
     GtkWidget* dialog = gtk_window_new();
     gtk_window_set_title(GTK_WINDOW(dialog), "Confirm");
@@ -333,15 +348,8 @@ void MainWindow::showConfirmDialog(const std::string& message, std::function<voi
         delete static_cast<std::function<void()>*>(data);
     });
     
-    g_signal_connect(cancelBtn, "clicked", G_CALLBACK([](GtkButton*, gpointer data) {
-        gtk_window_destroy(GTK_WINDOW(data));
-    }), dialog);
-    
-    g_signal_connect(okBtn, "clicked", G_CALLBACK([](GtkButton*, gpointer data) {
-        auto* callbackPtr = static_cast<std::function<void()>*>(g_object_get_data(G_OBJECT(data), "callback"));
-        if (callbackPtr) (*callbackPtr)();
-        gtk_window_destroy(GTK_WINDOW(data));
-    }), dialog);
+    g_signal_connect(cancelBtn, "clicked", G_CALLBACK(on_cancel_clicked), dialog);
+    g_signal_connect(okBtn, "clicked", G_CALLBACK(on_ok_clicked), dialog);
     
     gtk_window_present(GTK_WINDOW(dialog));
 }
@@ -370,9 +378,7 @@ void MainWindow::showInfoDialog(const std::string& message) {
     
     gtk_window_set_child(GTK_WINDOW(dialog), box);
     
-    g_signal_connect(okBtn, "clicked", G_CALLBACK([](GtkButton*, gpointer data) {
-        gtk_window_destroy(GTK_WINDOW(data));
-    }), dialog);
+    g_signal_connect(okBtn, "clicked", G_CALLBACK(on_info_ok_clicked), dialog);
     
     gtk_window_present(GTK_WINDOW(dialog));
 }
