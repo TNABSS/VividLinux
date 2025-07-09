@@ -20,5 +20,10 @@ EXAMPLES:
   ./builddir/vivid --reset-all          - Reset everything
 ```
 
-This is just a working demo, feel free to reach out and give support on this project, currently the project is almost out of the alpha stage and is launchable, however the saturation changing aspect in xrandr is quite broken and buggy, im working on it.
-This is still my 1st project to give support, under the Gnu 3.0 Feel free to use the code and make it better, with care --METADev.
+This is a working demo of the Vivid project. We welcome your feedback and contributions to help us improve it.
+
+Currently, the project is nearing the end of its alpha stage and is in a launchable state. However, please be aware that the saturation adjustment feature, which relies on `xrandr`, is currently experiencing some known bugs and instability. We are actively working on resolving these issues.
+
+This is our first open-source project, released under the GNU General Public License v3.0. Feel free to use, modify, and distribute the code, with the hope that you'll contribute to making it even better.
+
+-- METADev
