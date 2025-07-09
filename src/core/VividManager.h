@@ -64,10 +64,11 @@ private:
     bool m_monitoringEnabled;
     std::vector<VividDisplay> m_displays;
     std::vector<AppProfile> m_profiles;
-    std::map<std::string, float> m_baseVibrance; // Store original values
+    std::map<std::string, float> m_baseVibrance;
     
     // Detection methods
     bool tryAMDColorProperties();
+    bool tryAMDXrandrFallback();
     bool tryXRandrCTM();
     bool tryWaylandColorMgmt();
     
