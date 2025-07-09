@@ -38,6 +38,7 @@ public:
     bool initialize();
     std::vector<VividDisplay> getDisplays();
     bool setVibrance(const std::string& displayId, float vibrance); // -100 to +100
+    bool setVibranceSafe(const std::string& displayId, float vibrance); // Safe version with limits
     float getVibrance(const std::string& displayId);
     bool resetVibrance(const std::string& displayId);
     
@@ -65,6 +66,7 @@ private:
     std::vector<VividDisplay> m_displays;
     std::vector<AppProfile> m_profiles;
     std::map<std::string, float> m_baseVibrance;
+    std::map<std::string, float> m_originalVibrance; // Store original values for safety
     
     // Detection methods
     bool tryAMDColorProperties();
