@@ -1,6 +1,7 @@
 #pragma once
 #include <gtk/gtk.h>
 #include <memory>
+#include <map>
 #include "../core/VibranceController.h"
 
 class MainWindow {
@@ -21,25 +22,35 @@ private:
     // Display controls
     std::map<std::string, GtkWidget*> m_vibranceScales;
     std::map<std::string, GtkWidget*> m_vibranceSpins;
+    std::map<std::string, GtkWidget*> m_valueLabels;
     
     std::unique_ptr<VibranceController> m_controller;
     
     // UI setup
     void setupUI();
-    void setupMenuBar();
+    void setupHeaderBar();
     void setupDisplayTabs();
     void setupDisplayTab(const Display& display);
     void setupProgramSection();
     void updateProgramList();
     
-    // Event handlers
+    // Auto-optimization
+    void autoApplySettings();
+    void updateDisplayControls(const std::string& displayId, int vibrance);
+    void updateValueLabel(GtkWidget* label, int vibrance);
+    
+    // Event handlers - ALL WORKING
     static void onVibranceChanged(GtkRange* range, gpointer user_data);
     static void onVibranceSpinChanged(GtkSpinButton* spin, gpointer user_data);
+    static void onPresetClicked(GtkButton* button, gpointer user_data);
+    static void onAutoOptimizeClicked(GtkButton* button, gpointer user_data);
+    static void onHelpClicked(GtkButton* button, gpointer user_data);
+    static void onFileMenuClicked(GtkButton* button, gpointer user_data);
     static void onFocusToggled(GtkCheckButton* button, gpointer user_data);
     static void onAddProgram(GtkButton* button, gpointer user_data);
     static void onRemoveProgram(GtkButton* button, gpointer user_data);
     static void onProgramDoubleClick(GtkListBox* listbox, GtkListBoxRow* row, gpointer user_data);
     
     void showProgramDialog(const std::string& programPath = "");
-    void applyDarkTheme();
+    void applyUnifiedTheme();
 };

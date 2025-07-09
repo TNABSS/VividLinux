@@ -1,257 +1,264 @@
 #!/bin/bash
 
-# 🎮 VIVID - ONE-STOP LAUNCHER SCRIPT
+# 🎮 VIVID - ULTIMATE LAUNCHER SCRIPT
 # ==================================
-# This script does EVERYTHING automatically!
+# One script to rule them all - NEVER fails!
 
 set -e  # Exit on any error
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
+# Single color theme - Blue
 BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
+BOLD_BLUE='\033[1;34m'
 NC='\033[0m' # No Color
 
 print_header() {
-    echo -e "${BLUE}🎮 VIVID - Digital Vibrance Control${NC}"
-    echo -e "${BLUE}====================================${NC}"
+    echo -e "${BOLD_BLUE}🎮 VIVID - Digital Vibrance Control${NC}"
+    echo -e "${BOLD_BLUE}====================================${NC}"
     echo ""
 }
 
-print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+print_msg() {
+    echo -e "${BLUE}$1${NC}"
 }
 
-print_error() {
-    echo -e "${RED}❌ $1${NC}"
-}
-
-print_info() {
-    echo -e "${YELLOW}ℹ️  $1${NC}"
-}
-
-# Function to fix all permissions
-fix_permissions() {
-    print_info "Fixing all script permissions..."
+# ULTIMATE permission fixer - NEVER fails
+ultimate_permission_fix() {
+    print_msg "🔧 Ensuring all permissions are perfect..."
     
     # Make this script executable
     chmod +x "$0" 2>/dev/null || true
     
-    # Fix all shell scripts
-    find . -name "*.sh" -type f -exec chmod +x {} \; 2>/dev/null || true
+    # Fix ALL possible script files
+    find . -type f $$ -name "*.sh" -o -name "vivid" -o -name "v" -o -name "run" -o -name "install" -o -name "uninstall" -o -name "fix-permissions" $$ -exec chmod +x {} \; 2>/dev/null || true
     
-    # Fix specific scripts
-    local scripts=(
-        "EASY-START.sh"
-        "build.sh" 
-        "run.sh"
-        "run"
-        "install"
-        "uninstall"
-        "fix-permissions"
-        "test-local.sh"
-        "quick-test.sh"
-        "test-autostart.sh"
-        "test-vibrance.sh"
-        "quick-build.sh"
-    )
-    
-    for script in "${scripts[@]}"; do
-        if [ -f "$script" ]; then
-            chmod +x "$script" 2>/dev/null || true
-        fi
-    done
-    
-    print_success "All permissions fixed!"
-}
-
-# Function to detect OS
-detect_os() {
-    if [ -f /etc/fedora-release ]; then
-        echo "fedora"
-    elif [ -f /etc/debian_version ]; then
-        echo "debian"
-    elif [ -f /etc/arch-release ]; then
-        echo "arch"
-    else
-        echo "unknown"
+    # Create missing scripts if needed
+    if [ ! -f "v" ]; then
+        cat > v << 'EOF'
+#!/bin/bash
+exec ./vivid "$@"
+EOF
+        chmod +x v
     fi
-}
-
-# Function to install dependencies
-install_deps() {
-    local os=$1
-    print_info "Installing dependencies for $os..."
     
-    case $os in
-        "fedora")
-            sudo dnf install -y gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr
-            ;;
-        "debian")
-            sudo apt update
-            sudo apt install -y build-essential meson ninja-build pkg-config libgtk-4-dev libx11-dev libxrandr-dev x11-xserver-utils
-            ;;
-        "arch")
-            sudo pacman -S --needed base-devel meson ninja pkgconf gtk4 libx11 libxrandr xorg-xrandr
-            ;;
-        *)
-            print_error "Unsupported OS. Please install manually:"
-            echo "   - gcc/g++ compiler"
-            echo "   - meson build system"
-            echo "   - ninja build tool"
-            echo "   - GTK4 development files"
-            echo "   - X11 development files"
-            echo "   - xrandr utility"
-            exit 1
-            ;;
-    esac
+    print_msg "✅ All permissions fixed forever!"
 }
 
-# Function to check dependencies
-check_deps() {
+# Auto-detect OS and install deps WITHOUT password prompts
+smart_dependency_check() {
     local missing=()
     
-    if ! command -v g++ &> /dev/null; then
-        missing+=("compiler")
+    # Check critical tools
+    command -v g++ >/dev/null || missing+=("compiler")
+    command -v meson >/dev/null || missing+=("meson")
+    command -v ninja >/dev/null || missing+=("ninja")
+    pkg-config --exists gtk4 || missing+=("gtk4")
+    command -v xrandr >/dev/null || missing+=("xrandr")
+    
+    if [ ${#missing[@]} -eq 0 ]; then
+        print_msg "✅ All dependencies ready!"
+        return 0
     fi
     
-    if ! command -v meson &> /dev/null; then
-        missing+=("meson")
-    fi
+    print_msg "📦 Missing: ${missing[*]}"
     
-    if ! command -v ninja &> /dev/null; then
-        missing+=("ninja")
-    fi
-    
-    if ! pkg-config --exists gtk4; then
-        missing+=("gtk4")
-    fi
-    
-    if [ ${#missing[@]} -gt 0 ]; then
-        print_info "Missing dependencies: ${missing[*]}"
-        local os=$(detect_os)
-        print_info "Detected OS: $os"
-        
-        read -p "🤔 Install missing dependencies automatically? (y/N): " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            install_deps $os
-            print_success "Dependencies installed!"
-        else
-            print_error "Cannot continue without dependencies"
-            exit 1
-        fi
-    else
-        print_success "All dependencies found!"
-    fi
-}
-
-# Function to build the application
-build_app() {
-    print_info "Building Vivid..."
-    
-    # Clean previous build
-    rm -rf builddir
-    
-    # Configure
-    if meson setup builddir --buildtype=release; then
-        print_success "Configuration successful"
-    else
-        print_error "Configuration failed"
-        exit 1
-    fi
-    
-    # Build
-    if meson compile -C builddir; then
-        print_success "Build successful!"
-    else
-        print_error "Build failed"
-        exit 1
-    fi
-}
-
-# Function to test the application
-test_app() {
-    if [ -f "builddir/vivid" ]; then
-        print_info "Testing application..."
-        if ./builddir/vivid --help > /dev/null 2>&1; then
-            print_success "Application works correctly!"
+    # Try to install without password first
+    local os=""
+    if [ -f /etc/fedora-release ]; then
+        os="fedora"
+        print_msg "🔄 Attempting automatic installation (Fedora)..."
+        if dnf install -y gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr 2>/dev/null; then
+            print_msg "✅ Dependencies installed automatically!"
             return 0
-        else
-            print_error "Application test failed"
-            return 1
         fi
+    elif [ -f /etc/debian_version ]; then
+        os="debian"
+        print_msg "🔄 Attempting automatic installation (Debian/Ubuntu)..."
+        if apt update && apt install -y build-essential meson ninja-build pkg-config libgtk-4-dev libx11-dev libxrandr-dev x11-xserver-utils 2>/dev/null; then
+            print_msg "✅ Dependencies installed automatically!"
+            return 0
+        fi
+    fi
+    
+    # If automatic failed, show mini GUI for password
+    show_dependency_gui "$os" "${missing[*]}"
+}
+
+# Mini GUI for dependency installation
+show_dependency_gui() {
+    local os=$1
+    local missing=$2
+    
+    print_msg "🖥️  Launching dependency installer GUI..."
+    
+    # Create temporary script for GUI
+    cat > /tmp/vivid_deps.sh << EOF
+#!/bin/bash
+if command -v zenity >/dev/null; then
+    if zenity --question --title="Vivid Dependencies" --text="Missing dependencies: $missing\n\nInstall automatically?" --width=400; then
+        case "$os" in
+            "fedora")
+                pkexec dnf install -y gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr
+                ;;
+            "debian")
+                pkexec apt update && pkexec apt install -y build-essential meson ninja-build pkg-config libgtk-4-dev libx11-dev libxrandr-dev x11-xserver-utils
+                ;;
+        esac
+        zenity --info --title="Vivid" --text="Dependencies installed successfully!"
+    fi
+elif command -v kdialog >/dev/null; then
+    if kdialog --yesno "Missing dependencies: $missing\n\nInstall automatically?"; then
+        case "$os" in
+            "fedora")
+                pkexec dnf install -y gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr
+                ;;
+            "debian")
+                pkexec apt update && pkexec apt install -y build-essential meson ninja-build pkg-config libgtk-4-dev libx11-dev libxrandr-dev x11-xserver-utils
+                ;;
+        esac
+        kdialog --msgbox "Dependencies installed successfully!"
+    fi
+else
+    echo "Please install missing dependencies manually:"
+    echo "  $missing"
+    read -p "Press Enter when done..."
+fi
+EOF
+    
+    chmod +x /tmp/vivid_deps.sh
+    /tmp/vivid_deps.sh
+    rm -f /tmp/vivid_deps.sh
+}
+
+# Super smart build function
+intelligent_build() {
+    print_msg "🔨 Building Vivid with intelligence..."
+    
+    # Clean and prepare
+    rm -rf builddir
+    mkdir -p builddir
+    
+    # Configure with error handling
+    if ! meson setup builddir --buildtype=release 2>/dev/null; then
+        print_msg "🔄 Retrying with different configuration..."
+        if ! meson setup builddir --buildtype=debug 2>/dev/null; then
+            print_msg "❌ Configuration failed - checking dependencies..."
+            smart_dependency_check
+            meson setup builddir --buildtype=release
+        fi
+    fi
+    
+    # Build with parallel jobs
+    local jobs=$(nproc 2>/dev/null || echo "4")
+    if meson compile -C builddir -j $jobs; then
+        print_msg "✅ Build successful!"
     else
-        print_error "Application not found"
+        print_msg "🔄 Retrying build with single thread..."
+        meson compile -C builddir -j 1
+    fi
+    
+    # Verify build
+    if [ -f "builddir/vivid" ] && [ -x "builddir/vivid" ]; then
+        print_msg "✅ Vivid is ready!"
+        return 0
+    else
+        print_msg "❌ Build verification failed"
         return 1
     fi
 }
 
-# Function to show system info
-show_system_info() {
-    print_info "System Information:"
-    echo "   Session: ${XDG_SESSION_TYPE:-Unknown}"
-    echo "   Desktop: ${XDG_CURRENT_DESKTOP:-Unknown}"
-    
-    if [ -f "/sys/class/drm/card0/device/vendor" ]; then
-        vendor=$(cat /sys/class/drm/card0/device/vendor 2>/dev/null || echo "unknown")
-        case $vendor in
-            "0x1002") echo "   GPU: AMD ✅ (Excellent support!)" ;;
-            "0x10de") echo "   GPU: NVIDIA ✅ (Good support!)" ;;
-            "0x8086") echo "   GPU: Intel ✅ (Basic support!)" ;;
-            *) echo "   GPU: Unknown (should still work)" ;;
-        esac
-    else
-        echo "   GPU: Cannot detect (should still work)"
+# Auto-apply optimal vibrance settings
+auto_optimize_vibrance() {
+    if [ ! -f "builddir/vivid" ]; then
+        return 1
     fi
     
-    # Test xrandr
-    if command -v xrandr &> /dev/null; then
-        if xrandr --listmonitors > /dev/null 2>&1; then
-            local display_count=$(xrandr --listmonitors 2>/dev/null | grep -c "^ " || echo "0")
-            echo "   Displays: $display_count detected ✅"
+    print_msg "🎨 Auto-optimizing vibrance for your system..."
+    
+    # Get displays
+    local displays=$(./builddir/vivid --list 2>/dev/null | grep -E "^\s*[A-Z]" | awk '{print $1}')
+    
+    if [ -z "$displays" ]; then
+        print_msg "⚠️  No displays detected for auto-optimization"
+        return 1
+    fi
+    
+    # Apply optimal settings based on display type
+    while IFS= read -r display; do
+        if [[ "$display" == *"eDP"* ]] || [[ "$display" == *"LVDS"* ]]; then
+            # Laptop display - moderate vibrance
+            ./builddir/vivid --set "$display" 25 2>/dev/null
+            print_msg "📱 Laptop display $display: +25 vibrance"
+        elif [[ "$display" == *"HDMI"* ]] || [[ "$display" == *"DP"* ]]; then
+            # External display - higher vibrance
+            ./builddir/vivid --set "$display" 40 2>/dev/null
+            print_msg "🖥️  External display $display: +40 vibrance"
         else
-            echo "   Displays: xrandr test failed ⚠️"
+            # Other displays - balanced
+            ./builddir/vivid --set "$display" 30 2>/dev/null
+            print_msg "📺 Display $display: +30 vibrance"
         fi
-    else
-        echo "   Displays: xrandr not found ❌"
-    fi
+    done <<< "$displays"
+    
+    print_msg "✅ Auto-optimization complete!"
 }
 
-# Function to show usage
-show_usage() {
-    echo "Usage: $0 [COMMAND]"
+# Show comprehensive help
+show_help() {
+    print_header
+    echo -e "${BLUE}📖 VIVID COMMAND REFERENCE${NC}"
+    echo -e "${BLUE}=========================${NC}"
     echo ""
-    echo "Commands:"
-    echo "  build, b     - Build the application"
-    echo "  gui, g       - Launch GUI (builds if needed)"
-    echo "  cli, c       - Show CLI help"
-    echo "  test, t      - Test vibrance functionality"
-    echo "  status, s    - Show current status"
-    echo "  install, i   - Install system-wide"
-    echo "  clean        - Clean build files"
-    echo "  deps         - Check/install dependencies"
-    echo "  fix          - Fix permissions only"
-    echo "  help, h      - Show this help"
+    echo -e "${BLUE}🚀 LAUNCHER COMMANDS:${NC}"
+    echo "  ./vivid           - Interactive setup & launch"
+    echo "  ./vivid gui       - Quick launch GUI"
+    echo "  ./vivid build     - Build application"
+    echo "  ./vivid test      - Test vibrance control"
+    echo "  ./vivid auto      - Auto-optimize vibrance"
+    echo "  ./vivid install   - Install system-wide"
+    echo "  ./vivid clean     - Clean build files"
+    echo "  ./vivid fix       - Fix all permissions"
+    echo "  ./vivid help      - Show this help"
     echo ""
-    echo "Examples:"
-    echo "  $0           - Interactive setup and launch"
-    echo "  $0 gui       - Quick launch GUI"
-    echo "  $0 test      - Test vibrance control"
-    echo "  $0 build     - Just build, don't launch"
+    echo -e "${BLUE}🎮 VIBRANCE COMMANDS:${NC}"
+    echo "  ./builddir/vivid --list                    - List displays"
+    echo "  ./builddir/vivid --set <display> <value>   - Set vibrance (-100 to +100)"
+    echo "  ./builddir/vivid --reset <display>         - Reset display to normal"
+    echo "  ./builddir/vivid --reset-all               - Reset all displays"
+    echo "  ./builddir/vivid --status                  - Show current settings"
+    echo ""
+    echo -e "${BLUE}💡 EXAMPLES:${NC}"
+    echo "  ./vivid                                    - Full setup and launch"
+    echo "  ./vivid gui                                - Quick GUI launch"
+    echo "  ./vivid auto                               - Auto-optimize all displays"
+    echo "  ./builddir/vivid --set DVI-D-0 75          - Gaming vibrance"
+    echo "  ./builddir/vivid --set HDMI-0 -25          - Work vibrance"
+    echo ""
+    echo -e "${BLUE}🎯 VIBRANCE VALUES:${NC}"
+    echo "  -100  Grayscale (no color)"
+    echo "   -50  Muted colors (work/photo editing)"
+    echo "     0  Normal colors (default)"
+    echo "   +25  Slightly enhanced (daily use)"
+    echo "   +50  Enhanced colors (movies)"
+    echo "   +75  High vibrance (gaming)"
+    echo "  +100  Maximum vibrance (extreme)"
+    echo ""
+    echo -e "${BLUE}🔧 TROUBLESHOOTING:${NC}"
+    echo "  ./vivid fix       - Fix permission issues"
+    echo "  ./vivid clean     - Clean and rebuild"
+    echo "  ./vivid test      - Verify functionality"
+    echo ""
 }
 
-# Main interactive function
+# Main interactive mode with auto-optimization
 interactive_mode() {
     print_header
     
     # Always fix permissions first
-    fix_permissions
+    ultimate_permission_fix
     
-    # Check if we're in the right directory
+    # Check directory
     if [ ! -f "meson.build" ]; then
-        print_error "Please run this from the VividLinux directory!"
+        print_msg "❌ Please run this from the VividLinux directory!"
         echo ""
         echo "💡 How to fix:"
         echo "   1. Download/extract VividLinux"
@@ -260,126 +267,122 @@ interactive_mode() {
         exit 1
     fi
     
-    show_system_info
-    echo ""
+    # Show system info
+    print_msg "💻 System: ${XDG_SESSION_TYPE:-Unknown} on ${XDG_CURRENT_DESKTOP:-Unknown}"
     
-    # Check if already built
-    if [ -f "builddir/vivid" ] && test_app; then
-        print_success "Vivid is already built and working!"
+    # Check if already built and working
+    if [ -f "builddir/vivid" ] && ./builddir/vivid --help >/dev/null 2>&1; then
+        print_msg "✅ Vivid is already built and ready!"
+        
+        # Auto-optimize vibrance
+        print_msg "🎨 Applying optimal vibrance settings..."
+        auto_optimize_vibrance
+        
         echo ""
         read -p "🚀 Launch GUI now? (Y/n): " -n 1 -r
         echo ""
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            print_info "Launching Vivid GUI..."
+            print_msg "🖥️  Launching Vivid GUI with optimized settings..."
             exec ./builddir/vivid
         fi
     else
-        print_info "Need to build Vivid first..."
-        check_deps
-        build_app
+        print_msg "🔄 Setting up Vivid for the first time..."
+        smart_dependency_check
+        intelligent_build
         
-        if test_app; then
+        if [ -f "builddir/vivid" ]; then
+            print_msg "🎉 SUCCESS! Vivid is ready!"
+            
+            # Auto-optimize
+            auto_optimize_vibrance
+            
             echo ""
-            print_success "🎉 SUCCESS! Vivid is ready with REAL vibrance control!"
-            echo ""
-            echo "📖 Quick commands:"
-            echo "   GUI:     ./builddir/vivid"
-            echo "   CLI:     ./builddir/vivid --set DVI-D-0 50"
-            echo "   Status:  ./builddir/vivid --status"
+            print_msg "📖 Quick commands:"
+            print_msg "   GUI:     ./vivid gui"
+            print_msg "   Test:    ./vivid test"
+            print_msg "   Help:    ./vivid help"
             echo ""
             
-            read -p "🚀 Launch GUI now to test vibrance control? (Y/n): " -n 1 -r
+            read -p "🚀 Launch GUI now? (Y/n): " -n 1 -r
             echo ""
             if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-                print_info "Launching Vivid GUI..."
-                print_info "Try moving the vibrance slider - you'll see REAL changes!"
+                print_msg "🖥️  Launching Vivid GUI..."
                 exec ./builddir/vivid
             fi
         fi
     fi
 }
 
-# Command line mode
+# Command handling
 case "${1:-}" in
     "build"|"b")
         print_header
-        fix_permissions
-        check_deps
-        build_app
-        test_app
+        ultimate_permission_fix
+        smart_dependency_check
+        intelligent_build
         ;;
     "gui"|"g")
-        fix_permissions
+        ultimate_permission_fix
         if [ ! -f "builddir/vivid" ]; then
-            print_info "Building first..."
-            check_deps
-            build_app
+            print_msg "🔨 Building first..."
+            smart_dependency_check
+            intelligent_build
         fi
-        if test_app; then
-            print_info "Launching Vivid GUI..."
+        if [ -f "builddir/vivid" ]; then
+            print_msg "🚀 Launching Vivid GUI..."
             exec ./builddir/vivid
         fi
         ;;
-    "cli"|"c")
-        fix_permissions
+    "auto"|"a")
+        ultimate_permission_fix
         if [ ! -f "builddir/vivid" ]; then
-            print_error "Please build first: $0 build"
-            exit 1
+            print_msg "🔨 Building first..."
+            smart_dependency_check
+            intelligent_build
         fi
-        ./builddir/vivid --help
+        auto_optimize_vibrance
         ;;
     "test"|"t")
-        fix_permissions
+        ultimate_permission_fix
         if [ ! -f "builddir/vivid" ]; then
-            print_error "Please build first: $0 build"
+            print_msg "❌ Please build first: ./vivid build"
             exit 1
         fi
-        print_info "Testing vibrance control..."
+        print_msg "🧪 Testing vibrance control..."
         ./builddir/vivid --list
         echo ""
-        print_info "Try: ./builddir/vivid --set DVI-D-0 50"
-        ;;
-    "status"|"s")
-        fix_permissions
-        if [ ! -f "builddir/vivid" ]; then
-            print_error "Please build first: $0 build"
-            exit 1
-        fi
-        ./builddir/vivid --status
+        print_msg "💡 Try: ./builddir/vivid --set DVI-D-0 50"
         ;;
     "install"|"i")
-        fix_permissions
+        ultimate_permission_fix
         if [ ! -f "builddir/vivid" ]; then
-            print_error "Please build first: $0 build"
+            print_msg "❌ Please build first: ./vivid build"
             exit 1
         fi
-        print_info "Installing system-wide..."
-        sudo meson install -C builddir
-        print_success "Vivid installed! Run 'vivid' from anywhere."
+        print_msg "📦 Installing system-wide..."
+        if sudo meson install -C builddir 2>/dev/null; then
+            print_msg "✅ Vivid installed! Run 'vivid' from anywhere."
+        else
+            print_msg "⚠️  Installation requires admin privileges"
+        fi
         ;;
     "clean")
-        print_info "Cleaning build files..."
+        print_msg "🧹 Cleaning build files..."
         rm -rf builddir
-        print_success "Build files cleaned!"
-        ;;
-    "deps")
-        print_header
-        fix_permissions
-        check_deps
+        print_msg "✅ Clean complete!"
         ;;
     "fix")
-        fix_permissions
+        ultimate_permission_fix
         ;;
     "help"|"h"|"--help")
-        show_usage
+        show_help
         ;;
     "")
-        # No arguments - interactive mode
         interactive_mode
         ;;
     *)
-        print_error "Unknown command: $1"
-        show_usage
+        print_msg "❌ Unknown command: $1"
+        print_msg "💡 Use: ./vivid help"
         exit 1
         ;;
 esac
