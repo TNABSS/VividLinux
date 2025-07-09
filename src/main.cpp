@@ -1,112 +1,128 @@
 #include <iostream>
 #include <gtk/gtk.h>
-#include "core/VividManager.h"
 #include "ui/MainWindow.h"
-#include "cli/CommandLineInterface.h"
-#include <thread>
-#include <chrono>
+#include "core/VibranceController.h"
 
-static void activate(GtkApplication* app, gpointer user_data) {
-    auto* manager = static_cast<VividManager*>(user_data);
-    auto window = std::make_unique<MainWindow>(app, manager);
+static void activate(GtkApplication* app, gpointer user_data __attribute__((unused))) {
+    auto window = std::make_unique<MainWindow>(app);
     window->show();
     
-    // Keep window alive (this is a simplified approach)
+    // Keep window alive
     g_object_set_data_full(G_OBJECT(app), "window", window.release(), 
                           [](gpointer data) { delete static_cast<MainWindow*>(data); });
 }
 
-void print_simple_help() {
-    std::cout << "🎮 Vivid - Digital Vibrance Control\n\n";
-    std::cout << "💡 EASY COMMANDS:\n";
-    std::cout << "   vivid                    Launch GUI\n";
-    std::cout << "   vivid --help            Show detailed help\n";
-    std::cout << "   vivid --status          Show current settings\n";
-    std::cout << "   vivid --list            List your monitors\n\n";
-    std::cout << "🚀 QUICK EXAMPLES:\n";
-    std::cout << "   vivid --display HDMI-0 --vibrance 50    Make HDMI more colorful\n";
-    std::cout << "   vivid --display eDP-1 --vibrance -30    Make laptop screen less colorful\n";
-    std::cout << "   vivid --display HDMI-0 --reset          Reset HDMI to normal\n\n";
-    std::cout << "📖 Vibrance values: -100 (grayscale) to +100 (super colorful)\n";
+void print_help() {
+    std::cout << "🎮 Vivid - Digital Vibrance Control for Linux\n\n";
+    std::cout << "USAGE:\n";
+    std::cout << "  vivid                                    Launch GUI\n";
+    std::cout << "  vivid --list                            List displays\n";
+    std::cout << "  vivid --set <display> <vibrance>        Set vibrance (-100 to +100)\n";
+    std::cout << "  vivid --reset <display>                 Reset display to normal\n";
+    std::cout << "  vivid --reset-all                       Reset all displays\n";
+    std::cout << "  vivid --status                          Show current settings\n\n";
+    std::cout << "EXAMPLES:\n";
+    std::cout << "  vivid --set DVI-D-0 50                  Make DVI display more vibrant\n";
+    std::cout << "  vivid --set HDMI-0 -30                  Make HDMI display less vibrant\n";
+    std::cout << "  vivid --reset DVI-D-0                   Reset DVI to normal\n\n";
+    std::cout << "VIBRANCE VALUES:\n";
+    std::cout << "  -100  Completely desaturated (grayscale)\n";
+    std::cout << "     0  Normal colors (default)\n";
+    std::cout << "  +100  Maximum vibrance (oversaturated)\n\n";
+    std::cout << "The GUI provides an easy way to adjust settings and create\n";
+    std::cout << "per-application profiles for automatic vibrance switching.\n";
 }
 
 int main(int argc, char* argv[]) {
-    // Initialize the core manager
-    auto manager = std::make_unique<VividManager>();
-    
-    // Handle simple help first
-    if (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "help")) {
-        print_simple_help();
-        return 0;
-    }
-
-    // Handle autostart-specific arguments
-    for (int i = 1; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "--minimize") {
-            std::cout << "🔽 Starting minimized (autostart mode)" << std::endl;
-            // TODO: Implement minimize to tray
-        } else if (arg == "--apply-profiles") {
-            std::cout << "📋 Applying saved profiles on startup" << std::endl;
-            // Apply profiles after manager initialization
-            if (manager->initialize()) {
-                auto profiles = manager->getProfiles();
-                for (const auto& profile : profiles) {
-                    if (profile.enabled) {
-                        std::cout << "  Applying profile: " << profile.name << std::endl;
-                        // Apply profile vibrance settings
-                        for (const auto& setting : profile.displayVibrance) {
-                            manager->setVibrance(setting.first, setting.second);
-                        }
-                    }
+    // Handle CLI commands
+    if (argc > 1) {
+        std::string command = argv[1];
+        
+        if (command == "--help" || command == "-h") {
+            print_help();
+            return 0;
+        }
+        
+        // Initialize controller for CLI operations
+        VibranceController controller;
+        
+        if (command == "--list") {
+            auto displays = controller.getDisplays();
+            std::cout << "📺 Available displays:\n";
+            for (const auto& display : displays) {
+                std::cout << "  " << display.id << " (vibrance: " << display.currentVibrance << ")\n";
+            }
+            return 0;
+        }
+        
+        if (command == "--status") {
+            auto displays = controller.getDisplays();
+            std::cout << "🎮 Vivid Status:\n";
+            std::cout << "  Focus mode: " << (controller.getFocusMode() ? "enabled" : "disabled") << "\n";
+            std::cout << "  Displays:\n";
+            for (const auto& display : displays) {
+                std::cout << "    " << display.id << ": " << display.currentVibrance << "\n";
+            }
+            
+            auto profiles = controller.getProfiles();
+            std::cout << "  Profiles: " << profiles.size() << " configured\n";
+            return 0;
+        }
+        
+        if (command == "--set" && argc >= 4) {
+            std::string displayId = argv[2];
+            int vibrance = std::stoi(argv[3]);
+            
+            if (controller.setVibrance(displayId, vibrance)) {
+                std::cout << "✅ Set " << displayId << " vibrance to " << vibrance << "\n";
+            } else {
+                std::cout << "❌ Failed to set vibrance for " << displayId << "\n";
+                return 1;
+            }
+            return 0;
+        }
+        
+        if (command == "--reset" && argc >= 3) {
+            std::string displayId = argv[2];
+            
+            if (controller.resetDisplay(displayId)) {
+                std::cout << "✅ Reset " << displayId << " to normal\n";
+            } else {
+                std::cout << "❌ Failed to reset " << displayId << "\n";
+                return 1;
+            }
+            return 0;
+        }
+        
+        if (command == "--reset-all") {
+            auto displays = controller.getDisplays();
+            bool success = true;
+            
+            for (const auto& display : displays) {
+                if (!controller.resetDisplay(display.id)) {
+                    success = false;
                 }
             }
-        } else if (arg == "--delay" && i + 1 < argc) {
-            int delay = std::stoi(argv[i + 1]);
-            std::cout << "⏱️ Startup delay: " << delay << " seconds" << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(delay));
-            i++; // Skip the delay value argument
-        }
-    }
-    
-    // Initialize manager
-    if (!manager->initialize()) {
-        std::cerr << "❌ Failed to initialize Vivid\n";
-        std::cerr << "💡 This is usually fine - the GUI will still work in demo mode!\n";
-    }
-    
-    // Handle CLI arguments
-    if (argc > 1) {
-        // Convert some common arguments to standard format
-        std::vector<std::string> args;
-        for (int i = 0; i < argc; i++) {
-            std::string arg = argv[i];
             
-            // Convert simple arguments
-            if (arg == "--list") arg = "--list-displays";
-            if (arg == "--vibrance") arg = "--set-vibrance";
-            if (arg == "-s") arg = "--status";
-            if (arg == "-v") arg = "--version";
-            if (arg == "-h") arg = "--help";
-            
-            args.push_back(arg);
+            if (success) {
+                std::cout << "✅ Reset all displays to normal\n";
+            } else {
+                std::cout << "❌ Failed to reset some displays\n";
+                return 1;
+            }
+            return 0;
         }
         
-        // Convert back to char* array
-        std::vector<char*> c_args;
-        for (auto& arg : args) {
-            c_args.push_back(&arg[0]);
-        }
-        
-        CommandLineInterface cli(manager.get());
-        return cli.handleArguments(c_args.size(), c_args.data());
+        std::cout << "❌ Unknown command: " << command << "\n";
+        std::cout << "Run 'vivid --help' for usage information.\n";
+        return 1;
     }
     
     // Launch GUI
-    std::cout << "🚀 Launching Vivid GUI...\n";
+    std::cout << "🚀 Starting Vivid GUI...\n";
     
-    GtkApplication* app = gtk_application_new("org.vivid.SaturationControl", G_APPLICATION_DEFAULT_FLAGS);
-    g_signal_connect(app, "activate", G_CALLBACK(activate), manager.get());
+    GtkApplication* app = gtk_application_new("org.vivid.VibranceControl", G_APPLICATION_DEFAULT_FLAGS);
+    g_signal_connect(app, "activate", G_CALLBACK(activate), nullptr);
     
     int status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);

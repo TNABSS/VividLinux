@@ -1,79 +1,48 @@
-# 🎮 Vivid - Digital Vibrance Control
+# 🎮 Vivid - Real Vibrance Control for Linux
 
-**Make your games and videos more colorful on Linux!**
+**Actually changes your display colors - not just a demo!**
 
-## 🚀 SUPER EASY SETUP (3 steps)
+## 🚀 INSTANT SETUP
 
-### Step 1: Download
 \`\`\`bash
-# Download and extract VividLinux-main.zip
-# Then open terminal in that folder
-\`\`\`
-
-### Step 2: Run the magic script
-\`\`\`bash
+# 1. Download VividLinux-main.zip and extract
+# 2. Open terminal in that folder
+# 3. Run this ONE command:
 ./EASY-START.sh
 \`\`\`
-**That's it!** The script does everything automatically:
-- ✅ Checks your system
-- ✅ Installs what's needed  
-- ✅ Builds the app
-- ✅ Launches the GUI
 
-### Step 3: Use it!
-\`\`\`bash
-./run        # Launch GUI anytime
-\`\`\`
+**Done!** The vibrance changes are **real** and **permanent**.
 
-## 📖 Simple Commands
+## 💡 What You Get
 
-| Command | What it does |
-|---------|-------------|
-| `./EASY-START.sh` | First-time setup (does everything) |
-| `./run` | Launch the GUI |
-| `./install` | Install system-wide |
-| `./uninstall` | Remove from system |
+- **Real vibrance control** - Actually changes your screen colors
+- **Persistent settings** - Survives reboots and closing the app
+- **Gaming profiles** - Auto-switch vibrance for different games
+- **Simple interface** - Clean, dark theme like the screenshots
 
-## 🎯 What does it do?
+## 🎯 Quick Commands
 
-- **Adjust screen vibrance** from -100 (gray) to +100 (super colorful)
-- **Per-application settings** - different colors for games vs work
-- **Multiple monitors** - control each screen separately
-- **Works on AMD, NVIDIA, Intel** graphics
+| What you want | Command |
+|---------------|---------|
+| **Launch GUI** | `./run` |
+| **Gaming vibrance** | `vivid --set DVI-D-0 75` |
+| **Normal colors** | `vivid --reset DVI-D-0` |
+| **Check displays** | `vivid --list` |
+| **See current settings** | `vivid --status` |
 
-## 🖥️ Interface Guide
+## 🎮 Perfect For
 
-1. **Display tabs** - Click to switch between monitors
-2. **Vibrance slider** - Drag to adjust colors (-100 to +100)
-3. **Add program** - Set different colors for specific apps
-4. **Focus checkbox** - Only apply when app is active
+- **CS:GO/Valorant** - Boost enemy visibility
+- **Photo editing** - Accurate colors for work  
+- **Movies** - Enhanced colors for entertainment
+- **Daily use** - Slightly more vibrant desktop
 
-## ❓ Need Help?
+## ⚡ The Difference
 
-**GUI won't start?**
-\`\`\`bash
-./builddir/vivid --help    # Check if it works
-./builddir/vivid --status  # See what method is used
-\`\`\`
+**Other tools:** Just GUI demos that don't actually work  
+**Vivid:** Real system-level vibrance control that persists
 
-**Want to test without GUI?**
-\`\`\`bash
-./builddir/vivid --list-displays              # Show monitors
-./builddir/vivid --display HDMI-0 --set-vibrance 50  # Set vibrance
-./builddir/vivid --display HDMI-0 --reset     # Reset to normal
-\`\`\`
-
-**Remove everything?**
-\`\`\`bash
-./uninstall    # Remove from system
-rm -rf builddir    # Remove build files
-\`\`\`
-
-## 🎮 Perfect for:
-- **Gaming** - Make games more vibrant
-- **Movies** - Enhance video colors  
-- **Photo editing** - Reduce saturation for accurate work
-- **Streaming** - Different settings for different content
+**Try it:** Move the slider and watch your screen actually change colors!
 
 ---
-**Made simple for everyone! 🚀**
+**Finally, real vibrance control on Linux! 🚀**
