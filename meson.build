@@ -8,13 +8,11 @@ x11_dep = dependency('x11', required: false)
 xrandr_dep = dependency('xrandr', required: false)
 threads_dep = dependency('threads')
 
-# Source files
+# Source files - Updated to match new structure
 sources = [
   'src/main.cpp',
-  'src/core/VividManager.cpp',
-  'src/core/AutostartManager.cpp',
-  'src/ui/MainWindow.cpp',
-  'src/cli/CommandLineInterface.cpp'
+  'src/core/VibranceController.cpp',
+  'src/ui/MainWindow.cpp'
 ]
 
 # Include directories
@@ -37,14 +35,6 @@ executable('vivid',
   dependencies: deps,
   include_directories: inc,
   install: true)
-
-# Desktop file
-install_data('data/org.vivid.SaturationControl.desktop',
-  install_dir: get_option('datadir') / 'applications')
-
-# AppStream metadata
-install_data('data/org.vivid.SaturationControl.metainfo.xml',
-  install_dir: get_option('datadir') / 'metainfo')
 
 message('Build configured successfully!')
 message('Run: meson compile -C builddir')
