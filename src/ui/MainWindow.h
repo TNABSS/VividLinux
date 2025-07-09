@@ -17,6 +17,7 @@ private:
     GtkWidget* m_focusCheckbox = nullptr;
     GtkWidget* m_statusLabel = nullptr;
     GtkWidget* m_programList = nullptr;
+    GtkWidget* m_programListBox = nullptr; // Store reference to actual list box
     GtkWidget* m_addProgramButton = nullptr;
     GtkWidget* m_removeProgramButton = nullptr;
     

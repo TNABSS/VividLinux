@@ -249,11 +249,14 @@ void MainWindow::setupProgramList() {
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled), 
                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
     
-    // Use GtkListBox instead of deprecated GtkTreeView
-    m_programList = gtk_list_box_new();
-    gtk_widget_add_css_class(m_programList, "program-list");
+    // Create the actual list box
+    GtkWidget* listBox = gtk_list_box_new();
+    gtk_widget_add_css_class(listBox, "program-list");
     
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), m_programList);
+    // Store reference to the actual list box (not the scrolled window)
+    m_programListBox = listBox;
+    
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), listBox);
     m_programList = scrolled; // Store the scrolled window as the main widget
 }
 
@@ -320,13 +323,13 @@ void MainWindow::onRemoveProgramClicked(GtkButton* button __attribute__((unused)
     auto* window = static_cast<MainWindow*>(user_data);
     
     // Get selected program from list box
-    GtkListBox* listBox = GTK_LIST_BOX(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(window->m_programList)));
-    GtkListBoxRow* selected = gtk_list_box_get_selected_row(listBox);
-    
-    if (selected) {
-        // Remove the selected program
-        // This is a simplified implementation
-        gtk_list_box_remove(listBox, GTK_WIDGET(selected));
+    if (window->m_programListBox) {
+        GtkListBoxRow* selected = gtk_list_box_get_selected_row(GTK_LIST_BOX(window->m_programListBox));
+        
+        if (selected) {
+            // Remove the selected program
+            gtk_list_box_remove(GTK_LIST_BOX(window->m_programListBox), GTK_WIDGET(selected));
+        }
     }
 }
 
@@ -393,12 +396,14 @@ void MainWindow::updateVibranceControls() {
 }
 
 void MainWindow::updateProgramList() {
-    GtkListBox* listBox = GTK_LIST_BOX(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(m_programList)));
+    if (!m_programListBox) return;
     
-    // Clear existing items
-    GtkWidget* child;
-    while ((child = gtk_widget_get_first_child(GTK_WIDGET(listBox))) != nullptr) {
-        gtk_list_box_remove(listBox, child);
+    // Clear existing items safely
+    GtkWidget* child = gtk_widget_get_first_child(m_programListBox);
+    while (child) {
+        GtkWidget* next = gtk_widget_get_next_sibling(child);
+        gtk_list_box_remove(GTK_LIST_BOX(m_programListBox), child);
+        child = next;
     }
     
     // Add profiles
@@ -406,7 +411,15 @@ void MainWindow::updateProgramList() {
     for (const auto& profile : profiles) {
         GtkWidget* label = gtk_label_new(profile.name.c_str());
         gtk_widget_set_halign(label, GTK_ALIGN_START);
-        gtk_list_box_append(listBox, label);
+        gtk_list_box_append(GTK_LIST_BOX(m_programListBox), label);
+    }
+    
+    // Add a demo entry if no profiles exist
+    if (profiles.empty()) {
+        GtkWidget* label = gtk_label_new("No programs added yet");
+        gtk_widget_set_halign(label, GTK_ALIGN_START);
+        gtk_widget_add_css_class(label, "dim-label");
+        gtk_list_box_append(GTK_LIST_BOX(m_programListBox), label);
     }
 }
 
