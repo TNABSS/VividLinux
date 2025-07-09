@@ -6,7 +6,7 @@
 struct Display {
     std::string id;
     std::string name;
-    int currentVibrance = 0; // -100 to +100
+    int currentVibrance = 0;
     bool connected = true;
 };
 
@@ -15,19 +15,13 @@ public:
     VibranceController();
     ~VibranceController();
     
-    // Core functionality
     bool initialize();
     std::vector<Display> getDisplays();
-    bool setVibrance(const std::string& displayId, int vibrance); // Real-time application
+    bool setVibrance(const std::string& displayId, int vibrance);
     int getVibrance(const std::string& displayId);
     bool resetAllDisplays();
-    
-    // System management
     bool installSystemWide();
     bool isSystemInstalled();
-    
-    // Auto-setup
-    bool autoInstallDependencies();
     bool isReady() const { return m_initialized; }
     
 private:
@@ -35,11 +29,10 @@ private:
     std::map<std::string, int> m_currentVibrance;
     bool m_initialized = false;
     
-    // Implementation
     bool detectDisplays();
     bool applyVibranceImmediate(const std::string& displayId, int vibrance);
-    bool applyColorMatrix(const std::string& displayId, float saturation);  // NEW: Advanced method
-    bool applyAggressiveGamma(const std::string& displayId, float saturation);  // NEW: Better gamma
-    bool checkDependencies();
-    bool installMissingDeps();
+    bool applyXGamma(const std::string& displayId, int vibrance);
+    bool applyRedshift(int vibrance);
+    bool applyXCalib(const std::string& displayId, int vibrance);
+    bool applyXRandr(const std::string& displayId, int vibrance);
 };

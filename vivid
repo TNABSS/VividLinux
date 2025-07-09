@@ -32,8 +32,6 @@ print_header() {
 
 # Fix ALL permission issues automatically
 fix_permissions() {
-    print_msg "🔧 Fixing permissions..."
-    
     # Make this script executable
     chmod +x "$0" 2>/dev/null || true
     
@@ -42,20 +40,12 @@ fix_permissions() {
     find . -maxdepth 1 -name "vivid" -exec chmod +x {} \; 2>/dev/null || true
     find . -maxdepth 1 -name "run" -exec chmod +x {} \; 2>/dev/null || true
     find . -maxdepth 1 -name "v" -exec chmod +x {} \; 2>/dev/null || true
-    
-    print_success "Permissions fixed"
 }
 
 # Check if we're in the right directory
 check_directory() {
     if [ ! -f "meson.build" ]; then
         print_error "Please run from VividLinux directory"
-        echo ""
-        echo "💡 How to fix:"
-        echo "   1. Download/extract VividLinux"
-        echo "   2. cd VividLinux-main"
-        echo "   3. chmod +x vivid"
-        echo "   4. ./vivid"
         exit 1
     fi
 }
@@ -225,7 +215,7 @@ case "${1:-}" in
             exit 1
         fi
         print_msg "📦 Installing system-wide..."
-        if sudo meson install -C builddir; then
+        if pkexec cp builddir/vivid /usr/local/bin/vivid 2>/dev/null || sudo cp builddir/vivid /usr/local/bin/vivid; then
             print_success "Vivid installed system-wide!"
             echo "You can now run 'vivid' from anywhere"
         else
