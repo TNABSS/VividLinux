@@ -210,6 +210,9 @@ void MainWindow::setupUI() {
     // Program management card
     setupProgramCard(contentBox);
     
+    // Autostart management card
+    setupAutostartCard(contentBox);
+    
     // Status bar
     setupStatusBar(mainContainer);
 }
@@ -430,6 +433,83 @@ void MainWindow::setupProgramCard(GtkWidget* parent) {
     gtk_box_append(GTK_BOX(programCard), m_programList);
     
     gtk_box_append(GTK_BOX(parent), programCard);
+}
+
+void MainWindow::setupAutostartCard(GtkWidget* parent) {
+    GtkWidget* autostartCard = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    gtk_widget_add_css_class(autostartCard, "card");
+    
+    // Title
+    GtkWidget* autostartTitle = gtk_label_new("🚀 Autostart Configuration");
+    gtk_label_set_markup(GTK_LABEL(autostartTitle), "<b>🚀 Autostart Configuration</b>");
+    gtk_widget_set_halign(autostartTitle, GTK_ALIGN_START);
+    
+    // Status display
+    m_autostartStatusLabel = gtk_label_new("");
+    gtk_widget_set_halign(m_autostartStatusLabel, GTK_ALIGN_START);
+    gtk_label_set_wrap(GTK_LABEL(m_autostartStatusLabel), TRUE);
+    updateAutostartStatus();
+    
+    // Autostart checkbox
+    m_autostartCheckbox = gtk_check_button_new_with_label(
+        "Start Vivid automatically when I log in"
+    );
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(m_autostartCheckbox), 
+                               m_manager->isAutostartEnabled());
+    g_signal_connect(m_autostartCheckbox, "toggled", G_CALLBACK(onAutostartToggled), this);
+    
+    // Options section
+    GtkWidget* optionsBox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    gtk_widget_set_margin_start(optionsBox, 20);
+    
+    GtkWidget* minimizeCheck = gtk_check_button_new_with_label(
+        "Start minimized to system tray"
+    );
+    gtk_widget_set_sensitive(minimizeCheck, FALSE); // TODO: Implement tray
+    
+    GtkWidget* profilesCheck = gtk_check_button_new_with_label(
+        "Apply saved profiles on startup"
+    );
+    gtk_check_button_set_active(GTK_CHECK_BUTTON(profilesCheck), TRUE);
+    
+    GtkWidget* delayBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget* delayLabel = gtk_label_new("Startup delay:");
+    GtkWidget* delaySpin = gtk_spin_button_new_with_range(0, 30, 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(delaySpin), 3);
+    GtkWidget* delayUnit = gtk_label_new("seconds");
+    
+    gtk_box_append(GTK_BOX(delayBox), delayLabel);
+    gtk_box_append(GTK_BOX(delayBox), delaySpin);
+    gtk_box_append(GTK_BOX(delayBox), delayUnit);
+    
+    gtk_box_append(GTK_BOX(optionsBox), minimizeCheck);
+    gtk_box_append(GTK_BOX(optionsBox), profilesCheck);
+    gtk_box_append(GTK_BOX(optionsBox), delayBox);
+    
+    // Debug button
+    GtkWidget* debugButton = gtk_button_new_with_label("🔧 Debug Autostart");
+    gtk_widget_add_css_class(debugButton, "modern-button");
+    g_signal_connect(debugButton, "clicked", G_CALLBACK(onAutostartDebugClicked), this);
+    
+    // Help text
+    GtkWidget* helpText = gtk_label_new(
+        "Autostart allows Vivid to automatically apply your vibrance settings when you log in. "
+        "This is useful for maintaining consistent colors across reboots."
+    );
+    gtk_label_set_wrap(GTK_LABEL(helpText), TRUE);
+    gtk_label_set_markup(GTK_LABEL(helpText), 
+        "<span size='small' alpha='80%'>Autostart allows Vivid to automatically apply your vibrance settings when you log in. "
+        "This is useful for maintaining consistent colors across reboots.</span>");
+    
+    // Assemble card
+    gtk_box_append(GTK_BOX(autostartCard), autostartTitle);
+    gtk_box_append(GTK_BOX(autostartCard), m_autostartStatusLabel);
+    gtk_box_append(GTK_BOX(autostartCard), m_autostartCheckbox);
+    gtk_box_append(GTK_BOX(autostartCard), optionsBox);
+    gtk_box_append(GTK_BOX(autostartCard), debugButton);
+    gtk_box_append(GTK_BOX(autostartCard), helpText);
+    
+    gtk_box_append(GTK_BOX(parent), autostartCard);
 }
 
 void MainWindow::setupProgramList() {
@@ -742,6 +822,137 @@ void MainWindow::onFocusCheckboxToggled(GtkCheckButton* button, gpointer user_da
     auto* window = static_cast<MainWindow*>(user_data);
     bool enabled = gtk_check_button_get_active(button);
     window->m_manager->setMonitoringEnabled(enabled);
+}
+
+void MainWindow::onAutostartToggled(GtkCheckButton* button, gpointer user_data) {
+    auto* window = static_cast<MainWindow*>(user_data);
+    bool enabled = gtk_check_button_get_active(button);
+    
+    std::cout << "🚀 Autostart toggle: " << (enabled ? "enabling" : "disabling") << std::endl;
+    
+    bool success = false;
+    if (enabled) {
+        success = window->m_manager->enableAutostart();
+        if (success) {
+            std::cout << "✅ Autostart enabled successfully" << std::endl;
+        } else {
+            std::cout << "❌ Failed to enable autostart" << std::endl;
+            // Revert checkbox state
+            gtk_check_button_set_active(button, FALSE);
+        }
+    } else {
+        success = window->m_manager->disableAutostart();
+        if (success) {
+            std::cout << "✅ Autostart disabled successfully" << std::endl;
+        } else {
+            std::cout << "❌ Failed to disable autostart" << std::endl;
+            // Revert checkbox state
+            gtk_check_button_set_active(button, TRUE);
+        }
+    }
+    
+    // Update status display
+    window->updateAutostartStatus();
+    
+    if (success) {
+        // Show success notification
+        GtkWidget* dialog = gtk_message_dialog_new(
+            GTK_WINDOW(window->m_window),
+            GTK_DIALOG_MODAL,
+            GTK_MESSAGE_INFO,
+            GTK_BUTTONS_OK,
+            enabled ? "Autostart Enabled" : "Autostart Disabled"
+        );
+        
+        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
+            enabled ? "Vivid will now start automatically when you log in." :
+                     "Vivid will no longer start automatically.");
+        
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_window_destroy(GTK_WINDOW(dialog));
+    }
+}
+
+void MainWindow::onAutostartDebugClicked(GtkButton* button __attribute__((unused)), gpointer user_data) {
+    auto* window = static_cast<MainWindow*>(user_data);
+    window->showAutostartDebugDialog();
+}
+
+void MainWindow::showAutostartDebugDialog() {
+    GtkWidget* dialog = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(dialog), "Autostart Debug Information");
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(m_window));
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 700, 500);
+    
+    // Main container
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    gtk_widget_set_margin_start(vbox, 20);
+    gtk_widget_set_margin_end(vbox, 20);
+    gtk_widget_set_margin_top(vbox, 20);
+    gtk_widget_set_margin_bottom(vbox, 20);
+    gtk_window_set_child(GTK_WINDOW(dialog), vbox);
+    
+    // Title
+    GtkWidget* title = gtk_label_new("🔧 Autostart Debug Information");
+    gtk_label_set_markup(GTK_LABEL(title), 
+        "<span size='large' weight='bold'>🔧 Autostart Debug Information</span>");
+    
+    // Scrolled text view for debug info
+    GtkWidget* scrolled = gtk_scrolled_window_new();
+    gtk_widget_set_vexpand(scrolled, TRUE);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled),
+                                  GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    
+    GtkWidget* textView = gtk_text_view_new();
+    gtk_text_view_set_editable(GTK_TEXT_VIEW(textView), FALSE);
+    gtk_text_view_set_monospace(GTK_TEXT_VIEW(textView), TRUE);
+    gtk_widget_add_css_class(textView, "program-list");
+    
+    // Get debug info from autostart manager
+    // Note: This would need to be implemented in VividManager
+    std::string debugInfo = "=== Autostart Debug Information ===\n\n";
+    debugInfo += "Status: " + m_manager->getAutostartStatus() + "\n";
+    debugInfo += "This feature provides detailed debugging information\n";
+    debugInfo += "about the autostart configuration and any issues.\n\n";
+    debugInfo += "Current session: " + std::string(std::getenv("XDG_SESSION_TYPE") ?: "unknown") + "\n";
+    debugInfo += "Desktop environment: " + std::string(std::getenv("XDG_CURRENT_DESKTOP") ?: "unknown") + "\n";
+    debugInfo += "Home directory: " + std::string(std::getenv("HOME") ?: "unknown") + "\n";
+    
+    GtkTextBuffer* buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textView));
+    gtk_text_buffer_set_text(buffer, debugInfo.c_str(), -1);
+    
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), textView);
+    
+    // Buttons
+    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+    gtk_widget_set_halign(buttonBox, GTK_ALIGN_END);
+    
+    GtkWidget* copyButton = gtk_button_new_with_label("📋 Copy to Clipboard");
+    gtk_widget_add_css_class(copyButton, "modern-button");
+    
+    GtkWidget* closeButton = gtk_button_new_with_label("Close");
+    gtk_widget_add_css_class(closeButton, "modern-button");
+    
+    gtk_box_append(GTK_BOX(buttonBox), copyButton);
+    gtk_box_append(GTK_BOX(buttonBox), closeButton);
+    
+    // Assemble dialog
+    gtk_box_append(GTK_BOX(vbox), title);
+    gtk_box_append(GTK_BOX(vbox), scrolled);
+    gtk_box_append(GTK_BOX(vbox), buttonBox);
+    
+    // Connect signals
+    g_signal_connect_swapped(closeButton, "clicked", G_CALLBACK(gtk_window_destroy), dialog);
+    
+    gtk_window_present(GTK_WINDOW(dialog));
+}
+
+void MainWindow::updateAutostartStatus() {
+    if (m_autostartStatusLabel) {
+        std::string status = m_manager->getAutostartStatus();
+        gtk_label_set_text(GTK_LABEL(m_autostartStatusLabel), status.c_str());
+    }
 }
 
 void MainWindow::updateVibranceControls() {

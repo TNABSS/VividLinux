@@ -12,6 +12,7 @@ threads_dep = dependency('threads')
 sources = [
   'src/main.cpp',
   'src/core/VividManager.cpp',
+  'src/core/AutostartManager.cpp',
   'src/ui/MainWindow.cpp',
   'src/cli/CommandLineInterface.cpp'
 ]

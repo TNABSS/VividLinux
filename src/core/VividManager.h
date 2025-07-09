@@ -53,6 +53,12 @@ public:
     void stopApplicationMonitoring();
     bool isMonitoringEnabled() const { return m_monitoringEnabled; }
     void setMonitoringEnabled(bool enabled);
+
+    // Autostart functionality
+    bool isAutostartEnabled();
+    bool enableAutostart();
+    bool disableAutostart();
+    std::string getAutostartStatus();
     
     // Method info
     VibranceMethod getCurrentMethod() const { return m_currentMethod; }
@@ -89,4 +95,9 @@ private:
     void checkActiveApplication();
     std::string getCurrentActiveWindow();
     void applyProfileForApp(const std::string& appName, const std::string& windowTitle);
+
+    // Autostart helpers
+    std::string getAutostartFilePath();
+    std::string getDesktopFileContent();
+    bool createAutostartDirectory();
 };

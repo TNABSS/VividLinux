@@ -3,6 +3,8 @@
 #include "core/VividManager.h"
 #include "ui/MainWindow.h"
 #include "cli/CommandLineInterface.h"
+#include <thread>
+#include <chrono>
 
 static void activate(GtkApplication* app, gpointer user_data) {
     auto* manager = static_cast<VividManager*>(user_data);
@@ -36,6 +38,35 @@ int main(int argc, char* argv[]) {
     if (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "help")) {
         print_simple_help();
         return 0;
+    }
+
+    // Handle autostart-specific arguments
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "--minimize") {
+            std::cout << "🔽 Starting minimized (autostart mode)" << std::endl;
+            // TODO: Implement minimize to tray
+        } else if (arg == "--apply-profiles") {
+            std::cout << "📋 Applying saved profiles on startup" << std::endl;
+            // Apply profiles after manager initialization
+            if (manager->initialize()) {
+                auto profiles = manager->getProfiles();
+                for (const auto& profile : profiles) {
+                    if (profile.enabled) {
+                        std::cout << "  Applying profile: " << profile.name << std::endl;
+                        // Apply profile vibrance settings
+                        for (const auto& setting : profile.displayVibrance) {
+                            manager->setVibrance(setting.first, setting.second);
+                        }
+                    }
+                }
+            }
+        } else if (arg == "--delay" && i + 1 < argc) {
+            int delay = std::stoi(argv[i + 1]);
+            std::cout << "⏱️ Startup delay: " << delay << " seconds" << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(delay));
+            i++; // Skip the delay value argument
+        }
     }
     
     // Initialize manager

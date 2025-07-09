@@ -29,6 +29,9 @@ private:
     
     VividManager* m_manager;
     std::string m_currentDisplay;
+
+    GtkWidget* m_autostartCheckbox = nullptr;
+    GtkWidget* m_autostartStatusLabel = nullptr;
     
     // GTK callbacks
     static void onDisplayTabChanged(GtkNotebook* notebook, GtkWidget* page, guint page_num, gpointer user_data);
@@ -39,6 +42,9 @@ private:
     static void onAddProgramClicked(GtkButton* button, gpointer user_data);
     static void onRemoveProgramClicked(GtkButton* button, gpointer user_data);
     static void onSaveProgramProfile(GtkButton* button, gpointer user_data);
+
+    static void onAutostartToggled(GtkCheckButton* button, gpointer user_data);
+    static void onAutostartDebugClicked(GtkButton* button, gpointer user_data);
     
     void setupUI();
     void setupModernHeader();
@@ -49,11 +55,14 @@ private:
     void setupProgramCard(GtkWidget* parent);
     void setupProgramList();
     void setupStatusBar(GtkWidget* parent);
+    void setupAutostartCard(GtkWidget* parent);
     
     void showFileBrowserDialog();
     void showProgramConfigDialog(const std::string& programPath);
+    void showAutostartDebugDialog();
     
     void updateVibranceControls();
     void updateProgramList();
+    void updateAutostartStatus();
     void applyModernTheme();
 };

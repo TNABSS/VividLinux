@@ -7,6 +7,7 @@
 #include <thread>
 #include <chrono>
 #include <regex>
+#include "AutostartManager.h"
 
 #ifdef HAVE_X11
 #include <X11/Xlib.h>
@@ -19,6 +20,7 @@ VividManager::VividManager()
     : m_currentMethod(VibranceMethod::DEMO_MODE)
     , m_initialized(false)
     , m_monitoringEnabled(false) {
+    m_autostartManager = std::make_unique<AutostartManager>();
 }
 
 VividManager::~VividManager() {
@@ -355,3 +357,18 @@ std::string VividManager::getConfigPath() {
 }
 
 void VividManager::setMonitoringEnabled(bool
+bool VividManager::isAutostartEnabled() {
+    return m_autostartManager->isEnabled();
+}
+
+bool VividManager::enableAutostart() {
+    return m_autostartManager->enable();
+}
+
+bool VividManager::disableAutostart() {
+    return m_autostartManager->disable();
+}
+
+std::string VividManager::getAutostartStatus() {
+    return m_autostartManager->getStatus();
+}
