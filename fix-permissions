@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# 🔧 PERMISSION FIXER
+# ===================
+# Makes all scripts executable
+
+echo "🔧 Fixing permissions..."
+
+chmod +x EASY-START.sh
+chmod +x run
+chmod +x install  
+chmod +x uninstall
+chmod +x build.sh
+chmod +x test-local.sh
+chmod +x quick-test.sh
+
+echo "✅ All scripts are now executable!"
+echo ""
+echo "🚀 Now you can run:"
+echo "   ./EASY-START.sh  (first time setup)"
+echo "   ./run            (launch GUI)"

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# 🗑️  VIVID - UNINSTALLER
+# =======================
+# Removes Vivid from system
+
+echo "🗑️  Uninstalling Vivid..."
+
+# Remove binary
+sudo rm -f /usr/local/bin/vivid /usr/bin/vivid
+
+# Remove desktop file
+sudo rm -f /usr/local/share/applications/org.vivid.SaturationControl.desktop
+sudo rm -f /usr/share/applications/org.vivid.SaturationControl.desktop
+
+# Remove config (ask user)
+read -p "🤔 Remove user settings too? (y/N): " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    rm -rf ~/.config/vivid/
+    echo "✅ Settings removed"
+fi
+
+echo "✅ Vivid uninstalled!"

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# 🎮 VIVID - SIMPLE LAUNCHER
+# =========================
+# Just run "./run" - that's it!
+
+echo "🚀 Starting Vivid..."
+
+# Check if built
+if [ ! -f "builddir/vivid" ]; then
+    echo "⚠️  Not built yet. Building now..."
+    if [ -f "EASY-START.sh" ]; then
+        ./EASY-START.sh
+    else
+        echo "❌ Please run ./EASY-START.sh first"
+        exit 1
+    fi
+else
+    echo "✅ Launching GUI..."
+    ./builddir/vivid
+fi

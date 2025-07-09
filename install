@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# 🔧 VIVID - SYSTEM INSTALLER
+# ===========================
+# Installs Vivid system-wide
+
+set -e
+
+echo "🔧 Installing Vivid system-wide..."
+
+# Check if built
+if [ ! -f "builddir/vivid" ]; then
+    echo "❌ Please build first with ./EASY-START.sh"
+    exit 1
+fi
+
+# Install
+sudo meson install -C builddir
+
+echo "✅ Vivid installed!"
+echo ""
+echo "📖 You can now run 'vivid' from anywhere!"
+echo "   Or find it in your applications menu"
