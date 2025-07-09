@@ -166,7 +166,7 @@ intelligent_build() {
     fi
 }
 
-# Auto-apply optimal vibrance settings
+# Auto-apply optimal vibrance settings - FIXED
 auto_optimize_vibrance() {
     if [ ! -f "builddir/vivid" ]; then
         return 1
@@ -174,8 +174,8 @@ auto_optimize_vibrance() {
     
     print_msg "🎨 Auto-optimizing vibrance for your system..."
     
-    # Get displays
-    local displays=$(./builddir/vivid --list 2>/dev/null | grep -E "^\s*[A-Z]" | awk '{print $1}')
+    # Get displays with better parsing
+    local displays=$(./builddir/vivid --list 2>/dev/null | grep -E "^\s*[A-Z]" | awk '{print $1}' | head -5)
     
     if [ -z "$displays" ]; then
         print_msg "⚠️  No displays detected for auto-optimization"
@@ -184,18 +184,20 @@ auto_optimize_vibrance() {
     
     # Apply optimal settings based on display type
     while IFS= read -r display; do
-        if [[ "$display" == *"eDP"* ]] || [[ "$display" == *"LVDS"* ]]; then
-            # Laptop display - moderate vibrance
-            ./builddir/vivid --set "$display" 25 2>/dev/null
-            print_msg "📱 Laptop display $display: +25 vibrance"
-        elif [[ "$display" == *"HDMI"* ]] || [[ "$display" == *"DP"* ]]; then
-            # External display - higher vibrance
-            ./builddir/vivid --set "$display" 40 2>/dev/null
-            print_msg "🖥️  External display $display: +40 vibrance"
-        else
-            # Other displays - balanced
-            ./builddir/vivid --set "$display" 30 2>/dev/null
-            print_msg "📺 Display $display: +30 vibrance"
+        if [ -n "$display" ] && [ "$display" != "displays:" ]; then
+            if [[ "$display" == *"eDP"* ]] || [[ "$display" == *"LVDS"* ]]; then
+                # Laptop display - moderate vibrance
+                ./builddir/vivid --set "$display" 25 2>/dev/null
+                print_msg "📱 Laptop display $display: +25 vibrance"
+            elif [[ "$display" == *"HDMI"* ]] || [[ "$display" == *"DP"* ]]; then
+                # External display - higher vibrance
+                ./builddir/vivid --set "$display" 40 2>/dev/null
+                print_msg "🖥️  External display $display: +40 vibrance"
+            else
+                # Other displays - balanced
+                ./builddir/vivid --set "$display" 30 2>/dev/null
+                print_msg "📺 Display $display: +30 vibrance"
+            fi
         fi
     done <<< "$displays"
     
@@ -230,8 +232,8 @@ show_help() {
     echo "  ./vivid                                    - Full setup and launch"
     echo "  ./vivid gui                                - Quick GUI launch"
     echo "  ./vivid auto                               - Auto-optimize all displays"
-    echo "  ./builddir/vivid --set DVI-D-0 75          - Gaming vibrance"
-    echo "  ./builddir/vivid --set HDMI-0 -25          - Work vibrance"
+    echo "  ./builddir/vivid --set HDMI-A-1 75         - Gaming vibrance"
+    echo "  ./builddir/vivid --set HDMI-A-1 -25        - Work vibrance"
     echo ""
     echo -e "${BLUE}🎯 VIBRANCE VALUES:${NC}"
     echo "  -100  Grayscale (no color)"
@@ -351,7 +353,7 @@ case "${1:-}" in
         print_msg "🧪 Testing vibrance control..."
         ./builddir/vivid --list
         echo ""
-        print_msg "💡 Try: ./builddir/vivid --set DVI-D-0 50"
+        print_msg "💡 Try: ./builddir/vivid --set HDMI-A-1 50"
         ;;
     "install"|"i")
         ultimate_permission_fix

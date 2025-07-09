@@ -39,6 +39,9 @@ private:
     void updateDisplayControls(const std::string& displayId, int vibrance);
     void updateValueLabel(GtkWidget* label, int vibrance);
     
+    // Modern dialog helper
+    GtkWidget* createModernDialog(const char* title, const char* message);
+    
     // Event handlers - ALL WORKING
     static void onVibranceChanged(GtkRange* range, gpointer user_data);
     static void onVibranceSpinChanged(GtkSpinButton* spin, gpointer user_data);

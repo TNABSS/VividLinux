@@ -451,7 +451,31 @@ void MainWindow::updateValueLabel(GtkWidget* label, int vibrance) {
     gtk_label_set_text(GTK_LABEL(label), text.c_str());
 }
 
-// Event handlers - ALL WORKING
+// Modern dialog creation function
+GtkWidget* MainWindow::createModernDialog(const char* title, const char* message) {
+    GtkWidget* dialog = gtk_dialog_new_with_buttons(
+        title,
+        GTK_WINDOW(m_window),
+        GTK_DIALOG_MODAL,
+        "OK", GTK_RESPONSE_OK,
+        NULL
+    );
+    
+    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget* label = gtk_label_new(message);
+    gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(label), 60);
+    gtk_widget_set_margin_start(label, 20);
+    gtk_widget_set_margin_end(label, 20);
+    gtk_widget_set_margin_top(label, 20);
+    gtk_widget_set_margin_bottom(label, 20);
+    
+    gtk_box_append(GTK_BOX(content), label);
+    
+    return dialog;
+}
+
+// Event handlers - ALL WORKING with modern dialogs
 void MainWindow::onVibranceChanged(GtkRange* range, gpointer user_data) {
     auto* window = static_cast<MainWindow*>(user_data);
     
@@ -526,16 +550,12 @@ void MainWindow::onAutoOptimizeClicked(GtkButton* button __attribute__((unused))
     auto* window = static_cast<MainWindow*>(user_data);
     window->autoApplySettings();
     
-    // Show confirmation
-    GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(window->m_window),
-        GTK_DIALOG_MODAL,
-        GTK_MESSAGE_INFO,
-        GTK_BUTTONS_OK,
+    // Show confirmation with modern dialog
+    GtkWidget* dialog = window->createModernDialog(
+        "Vivid Auto-Optimization",
         "🎨 Auto-Optimization Complete!\n\nOptimal vibrance settings have been applied to all displays."
     );
     
-    gtk_window_set_title(GTK_WINDOW(dialog), "Vivid");
     g_signal_connect(dialog, "response", G_CALLBACK(gtk_window_destroy), NULL);
     gtk_window_present(GTK_WINDOW(dialog));
 }
@@ -569,18 +589,10 @@ void MainWindow::onHelpClicked(GtkButton* button __attribute__((unused)), gpoint
         "  +100  Maximum vibrance\n\n"
         "💡 EXAMPLES:\n"
         "  ./vivid auto                               - Auto-optimize\n"
-        "  ./builddir/vivid --set DVI-D-0 75          - Gaming setup\n"
-        "  ./builddir/vivid --set HDMI-0 -25          - Work setup";
+        "  ./builddir/vivid --set HDMI-A-1 75         - Gaming setup\n"
+        "  ./builddir/vivid --set HDMI-A-1 -25        - Work setup";
     
-    GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(window->m_window),
-        GTK_DIALOG_MODAL,
-        GTK_MESSAGE_INFO,
-        GTK_BUTTONS_OK,
-        "%s", helpText
-    );
-    
-    gtk_window_set_title(GTK_WINDOW(dialog), "Vivid Help");
+    GtkWidget* dialog = window->createModernDialog("Vivid Help", helpText);
     gtk_window_set_default_size(GTK_WINDOW(dialog), 600, 500);
     g_signal_connect(dialog, "response", G_CALLBACK(gtk_window_destroy), NULL);
     gtk_window_present(GTK_WINDOW(dialog));
@@ -589,20 +601,15 @@ void MainWindow::onHelpClicked(GtkButton* button __attribute__((unused)), gpoint
 void MainWindow::onFileMenuClicked(GtkButton* button __attribute__((unused)), gpointer user_data) {
     auto* window = static_cast<MainWindow*>(user_data);
     
-    GtkWidget* dialog = gtk_message_dialog_new(
-        GTK_WINDOW(window->m_window),
-        GTK_DIALOG_MODAL,
-        GTK_MESSAGE_INFO,
-        GTK_BUTTONS_OK,
+    const char* fileText = 
         "📁 File Menu\n\n"
         "Settings are automatically saved to:\n"
         "~/.config/vivid/settings.conf\n\n"
         "Profiles are saved to:\n"
         "~/.config/vivid/profiles.conf\n\n"
-        "All changes are applied immediately and persist across restarts."
-    );
+        "All changes are applied immediately and persist across restarts.";
     
-    gtk_window_set_title(GTK_WINDOW(dialog), "File Information");
+    GtkWidget* dialog = window->createModernDialog("File Information", fileText);
     g_signal_connect(dialog, "response", G_CALLBACK(gtk_window_destroy), NULL);
     gtk_window_present(GTK_WINDOW(dialog));
 }
@@ -647,10 +654,15 @@ void MainWindow::onRemoveProgram(GtkButton* button __attribute__((unused)), gpoi
         GtkWidget* label = gtk_list_box_row_get_child(selected);
         if (label) {
             const char* text = gtk_label_get_text(GTK_LABEL(label));
-            window->m_controller->removeProfile(text);
+            // Remove emoji prefix
+            std::string profileName = text;
+            if (profileName.substr(0, 4) == "🎮 ") {
+                profileName = profileName.substr(4);
+            }
+            window->m_controller->removeProfile(profileName);
             window->updateProgramList();
             
-            std::cout << "🗑️ Removed profile: " << text << std::endl;
+            std::cout << "🗑️ Removed profile: " << profileName << std::endl;
         }
     }
 }
@@ -662,10 +674,16 @@ void MainWindow::onProgramDoubleClick(GtkListBox* listbox __attribute__((unused)
     if (label) {
         const char* text = gtk_label_get_text(GTK_LABEL(label));
         
+        // Remove emoji prefix
+        std::string profileName = text;
+        if (profileName.substr(0, 4) == "🎮 ") {
+            profileName = profileName.substr(4);
+        }
+        
         // Find profile and edit it
         auto profiles = window->m_controller->getProfiles();
         for (const auto& profile : profiles) {
-            if (profile.name == text) {
+            if (profile.name == profileName) {
                 window->showProgramDialog(profile.path);
                 break;
             }
@@ -712,20 +730,12 @@ void MainWindow::showProgramDialog(const std::string& programPath) {
         m_controller->saveProfile(profile);
         updateProgramList();
         
-        // Show confirmation
+        // Show confirmation with modern dialog
         std::string message = "✅ Profile created for: " + profile.name + "\n\n"
                              "Vibrance set to +75 (gaming) for all displays.\n"
                              "Enable focus mode to activate automatically.";
         
-        GtkWidget* dialog = gtk_message_dialog_new(
-            GTK_WINDOW(m_window),
-            GTK_DIALOG_MODAL,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            "%s", message.c_str()
-        );
-        
-        gtk_window_set_title(GTK_WINDOW(dialog), "Profile Created");
+        GtkWidget* dialog = createModernDialog("Profile Created", message.c_str());
         g_signal_connect(dialog, "response", G_CALLBACK(gtk_window_destroy), NULL);
         gtk_window_present(GTK_WINDOW(dialog));
     }
