@@ -38,6 +38,8 @@ private:
     // Implementation
     bool detectDisplays();
     bool applyVibranceImmediate(const std::string& displayId, int vibrance);
+    bool applyColorMatrix(const std::string& displayId, float saturation);  // NEW: Advanced method
+    bool applyAggressiveGamma(const std::string& displayId, float saturation);  // NEW: Better gamma
     bool checkDependencies();
     bool installMissingDeps();
 };

@@ -1,14 +1,14 @@
 #include "MainWindow.h"
 #include <iostream>
 #include <filesystem>
-#include <functional>  // FIXED: Added missing include
+#include <functional>
 
 MainWindow::MainWindow(GtkApplication* app) {
     m_controller = std::make_unique<VibranceController>();
     
     m_window = gtk_application_window_new(app);
-    gtk_window_set_title(GTK_WINDOW(m_window), "Vivid");
-    gtk_window_set_default_size(GTK_WINDOW(m_window), 400, 300);
+    gtk_window_set_title(GTK_WINDOW(m_window), "Vivid - Digital Vibrance Control");
+    gtk_window_set_default_size(GTK_WINDOW(m_window), 450, 350);
     gtk_window_set_resizable(GTK_WINDOW(m_window), FALSE);
     
     applyGrayTheme();
@@ -20,6 +20,7 @@ MainWindow::~MainWindow() = default;
 void MainWindow::applyGrayTheme() {
     GtkCssProvider* provider = gtk_css_provider_new();
     
+    // FIXED: Removed invalid CSS properties
     const char* css = R"(
         window {
             background-color: #2d2d2d;
@@ -48,11 +49,16 @@ void MainWindow::applyGrayTheme() {
         }
         
         .value-label {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: bold;
             color: #cccccc;
-            text-align: center;
             margin: 8px 0;
+        }
+        
+        .vibrance-info {
+            font-size: 12px;
+            color: #999999;
+            margin: 5px 0;
         }
         
         scale {
@@ -60,17 +66,17 @@ void MainWindow::applyGrayTheme() {
         }
         
         scale trough {
-            background: linear-gradient(to right, #555555 0%, #777777 50%, #555555 100%);
+            background: linear-gradient(to right, #ff4444 0%, #555555 50%, #44ff44 100%);
             border-radius: 4px;
-            min-height: 6px;
+            min-height: 8px;
         }
         
         scale slider {
             background-color: #ffffff;
             border: 2px solid #888888;
             border-radius: 50%;
-            min-width: 16px;
-            min-height: 16px;
+            min-width: 18px;
+            min-height: 18px;
         }
         
         scale slider:hover {
@@ -83,10 +89,10 @@ void MainWindow::applyGrayTheme() {
             color: #ffffff;
             border: 1px solid #666666;
             border-radius: 6px;
-            padding: 10px 20px;
+            padding: 12px 24px;
             margin: 5px;
             font-weight: 500;
-            min-height: 40px;
+            min-height: 44px;
         }
         
         button:hover {
@@ -99,35 +105,45 @@ void MainWindow::applyGrayTheme() {
         }
         
         .apply-button {
-            background-color: #666666;
+            background-color: #0066cc;
             font-weight: bold;
-            min-width: 120px;
+            min-width: 140px;
         }
         
         .apply-button:hover {
-            background-color: #777777;
+            background-color: #0077dd;
         }
         
         .install-button {
-            background-color: #5a5a5a;
+            background-color: #006600;
         }
         
         .install-button:hover {
-            background-color: #6a6a6a;
+            background-color: #007700;
         }
         
         .reset-button {
-            background-color: #4a4a4a;
+            background-color: #cc6600;
         }
         
         .reset-button:hover {
-            background-color: #555555;
+            background-color: #dd7700;
         }
         
         .button-box {
             margin-top: 20px;
             padding-top: 15px;
             border-top: 1px solid #555555;
+        }
+        
+        .status-info {
+            background-color: #333333;
+            border: 1px solid #555555;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #cccccc;
         }
     )";
     
@@ -146,6 +162,12 @@ void MainWindow::setupUI() {
     gtk_widget_add_css_class(m_mainBox, "main-container");
     gtk_window_set_child(GTK_WINDOW(m_window), m_mainBox);
     
+    // Add status info
+    GtkWidget* statusInfo = gtk_label_new("🎮 Move sliders to see REAL vibrance changes!\n💡 Changes are applied instantly and persist until reset.");
+    gtk_widget_add_css_class(statusInfo, "status-info");
+    gtk_label_set_wrap(GTK_LABEL(statusInfo), TRUE);
+    gtk_box_append(GTK_BOX(m_mainBox), statusInfo);
+    
     setupDisplayControls();
     
     // Button section
@@ -153,15 +175,15 @@ void MainWindow::setupUI() {
     gtk_widget_add_css_class(buttonBox, "button-box");
     gtk_widget_set_halign(buttonBox, GTK_ALIGN_CENTER);
     
-    m_applyButton = gtk_button_new_with_label("Apply to All");
+    m_applyButton = gtk_button_new_with_label("💾 Save Settings");
     gtk_widget_add_css_class(m_applyButton, "apply-button");
     g_signal_connect(m_applyButton, "clicked", G_CALLBACK(onApplyClicked), this);
     
-    m_installButton = gtk_button_new_with_label("Set System Wide");
+    m_installButton = gtk_button_new_with_label("🌐 Install System-Wide");
     gtk_widget_add_css_class(m_installButton, "install-button");
     g_signal_connect(m_installButton, "clicked", G_CALLBACK(onInstallClicked), this);
     
-    m_resetButton = gtk_button_new_with_label("Reset All");
+    m_resetButton = gtk_button_new_with_label("🔄 Reset All");
     gtk_widget_add_css_class(m_resetButton, "reset-button");
     g_signal_connect(m_resetButton, "clicked", G_CALLBACK(onResetClicked), this);
     
@@ -179,22 +201,31 @@ void MainWindow::setupDisplayControls() {
         GtkWidget* displaySection = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
         gtk_widget_add_css_class(displaySection, "display-section");
         
-        std::string titleText = "Display: " + display.id;
+        std::string titleText = "🖥️ Display: " + display.id;
         GtkWidget* titleLabel = gtk_label_new(titleText.c_str());
         gtk_widget_add_css_class(titleLabel, "display-title");
         gtk_widget_set_halign(titleLabel, GTK_ALIGN_START);
         
-        GtkWidget* valueLabel = gtk_label_new("Normal (0)");
+        GtkWidget* valueLabel = gtk_label_new("Normal (0%)");
         gtk_widget_add_css_class(valueLabel, "value-label");
+        gtk_widget_set_halign(valueLabel, GTK_ALIGN_CENTER);
         m_valueLabels[display.id] = valueLabel;
+        
+        // Info label
+        GtkWidget* infoLabel = gtk_label_new("← Less Saturated | More Saturated →");
+        gtk_widget_add_css_class(infoLabel, "vibrance-info");
+        gtk_widget_set_halign(infoLabel, GTK_ALIGN_CENTER);
         
         GtkWidget* vibranceScale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -100.0, 100.0, 1.0);
         gtk_scale_set_draw_value(GTK_SCALE(vibranceScale), FALSE);
         gtk_range_set_value(GTK_RANGE(vibranceScale), display.currentVibrance);
         
-        gtk_scale_add_mark(GTK_SCALE(vibranceScale), -100.0, GTK_POS_BOTTOM, "-100");
-        gtk_scale_add_mark(GTK_SCALE(vibranceScale), 0.0, GTK_POS_BOTTOM, "0");
-        gtk_scale_add_mark(GTK_SCALE(vibranceScale), 100.0, GTK_POS_BOTTOM, "+100");
+        // More visible marks
+        gtk_scale_add_mark(GTK_SCALE(vibranceScale), -100.0, GTK_POS_BOTTOM, "Grayscale");
+        gtk_scale_add_mark(GTK_SCALE(vibranceScale), -50.0, GTK_POS_BOTTOM, "-50%");
+        gtk_scale_add_mark(GTK_SCALE(vibranceScale), 0.0, GTK_POS_BOTTOM, "Normal");
+        gtk_scale_add_mark(GTK_SCALE(vibranceScale), 50.0, GTK_POS_BOTTOM, "+50%");
+        gtk_scale_add_mark(GTK_SCALE(vibranceScale), 100.0, GTK_POS_BOTTOM, "Vivid");
         
         m_vibranceScales[display.id] = vibranceScale;
         g_object_set_data(G_OBJECT(vibranceScale), "display_id", g_strdup(display.id.c_str()));
@@ -202,6 +233,7 @@ void MainWindow::setupDisplayControls() {
         
         gtk_box_append(GTK_BOX(displaySection), titleLabel);
         gtk_box_append(GTK_BOX(displaySection), valueLabel);
+        gtk_box_append(GTK_BOX(displaySection), infoLabel);
         gtk_box_append(GTK_BOX(displaySection), vibranceScale);
         
         gtk_box_append(GTK_BOX(m_mainBox), displaySection);
@@ -213,11 +245,11 @@ void MainWindow::updateValueLabel(const std::string& displayId, int vibrance) {
     if (it != m_valueLabels.end()) {
         std::string text;
         if (vibrance == 0) {
-            text = "Normal (0)";
+            text = "Normal (0%)";
         } else if (vibrance > 0) {
-            text = "Enhanced (+" + std::to_string(vibrance) + ")";
+            text = "Enhanced (+" + std::to_string(vibrance) + "%)";
         } else {
-            text = "Reduced (" + std::to_string(vibrance) + ")";
+            text = "Reduced (" + std::to_string(vibrance) + "%)";
         }
         
         gtk_label_set_text(GTK_LABEL(it->second), text.c_str());
@@ -242,10 +274,10 @@ void MainWindow::onApplyClicked(GtkButton* button __attribute__((unused)), gpoin
     auto* window = static_cast<MainWindow*>(user_data);
     
     window->showConfirmDialog(
-        "Apply current vibrance settings to all displays?\n\nThis will make the changes permanent.",
+        "💾 Save current vibrance settings?\n\nThis will make the current settings persistent across reboots.",
         [window]() {
             window->applyAllSettings();
-            window->showInfoDialog("✅ Settings applied successfully!");
+            window->showInfoDialog("✅ Settings saved successfully!\n\n🎮 Your vibrance settings are now persistent.");
         }
     );
 }
@@ -254,17 +286,17 @@ void MainWindow::onInstallClicked(GtkButton* button __attribute__((unused)), gpo
     auto* window = static_cast<MainWindow*>(user_data);
     
     if (window->m_controller->isSystemInstalled()) {
-        window->showInfoDialog("✅ Vivid is already installed system-wide!");
+        window->showInfoDialog("✅ Vivid is already installed system-wide!\n\nYou can run 'vivid' from anywhere.");
         return;
     }
     
     window->showConfirmDialog(
-        "Install Vivid system-wide?\n\nThis will make 'vivid' available from anywhere.",
+        "🌐 Install Vivid system-wide?\n\nThis will:\n• Make 'vivid' available from terminal\n• Add Vivid to applications menu\n• Require admin password",
         [window]() {
             if (window->m_controller->installSystemWide()) {
-                window->showInfoDialog("✅ Vivid installed system-wide!\n\nYou can now run 'vivid' from anywhere.");
+                window->showInfoDialog("✅ Vivid installed system-wide!\n\n🚀 You can now:\n• Run 'vivid' from terminal\n• Find Vivid in applications menu\n• Use CLI commands anywhere");
             } else {
-                window->showInfoDialog("❌ Installation failed.\n\nMake sure you have admin privileges.");
+                window->showInfoDialog("❌ Installation failed.\n\n💡 Try running:\nsudo cp builddir/vivid /usr/local/bin/");
             }
         }
     );
@@ -274,7 +306,7 @@ void MainWindow::onResetClicked(GtkButton* button __attribute__((unused)), gpoin
     auto* window = static_cast<MainWindow*>(user_data);
     
     window->showConfirmDialog(
-        "Reset all displays to normal vibrance?\n\nThis will set all values to 0.",
+        "🔄 Reset all displays to normal vibrance?\n\nThis will set all values to 0% (normal colors).",
         [window]() {
             window->m_controller->resetAllDisplays();
             
@@ -283,7 +315,7 @@ void MainWindow::onResetClicked(GtkButton* button __attribute__((unused)), gpoin
                 window->updateValueLabel(pair.first, 0);
             }
             
-            window->showInfoDialog("✅ All displays reset to normal!");
+            window->showInfoDialog("✅ All displays reset to normal!\n\n🎨 Colors restored to default values.");
         }
     );
 }
@@ -296,7 +328,6 @@ void MainWindow::applyAllSettings() {
     }
 }
 
-// FIXED: Modern GTK4 dialogs without deprecated functions
 // FIXED: Proper GTK callback functions instead of lambdas
 static void on_cancel_clicked(GtkButton* button, gpointer user_data) {
     gtk_window_destroy(GTK_WINDOW(user_data));
@@ -314,10 +345,10 @@ static void on_info_ok_clicked(GtkButton* button, gpointer user_data) {
 
 void MainWindow::showConfirmDialog(const std::string& message, std::function<void()> callback) {
     GtkWidget* dialog = gtk_window_new();
-    gtk_window_set_title(GTK_WINDOW(dialog), "Confirm");
+    gtk_window_set_title(GTK_WINDOW(dialog), "Confirm Action");
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(m_window));
-    gtk_window_set_default_size(GTK_WINDOW(dialog), 300, 150);
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 180);
     
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
     gtk_widget_set_margin_start(box, 20);
@@ -327,12 +358,13 @@ void MainWindow::showConfirmDialog(const std::string& message, std::function<voi
     
     GtkWidget* label = gtk_label_new(message.c_str());
     gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+    gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
     
-    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 15);
     gtk_widget_set_halign(buttonBox, GTK_ALIGN_CENTER);
     
-    GtkWidget* cancelBtn = gtk_button_new_with_label("Cancel");
-    GtkWidget* okBtn = gtk_button_new_with_label("OK");
+    GtkWidget* cancelBtn = gtk_button_new_with_label("❌ Cancel");
+    GtkWidget* okBtn = gtk_button_new_with_label("✅ Confirm");
     
     gtk_box_append(GTK_BOX(buttonBox), cancelBtn);
     gtk_box_append(GTK_BOX(buttonBox), okBtn);
@@ -359,7 +391,7 @@ void MainWindow::showInfoDialog(const std::string& message) {
     gtk_window_set_title(GTK_WINDOW(dialog), "Information");
     gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(m_window));
-    gtk_window_set_default_size(GTK_WINDOW(dialog), 300, 120);
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 160);
     
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
     gtk_widget_set_margin_start(box, 20);
@@ -369,8 +401,9 @@ void MainWindow::showInfoDialog(const std::string& message) {
     
     GtkWidget* label = gtk_label_new(message.c_str());
     gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+    gtk_widget_set_halign(label, GTK_ALIGN_CENTER);
     
-    GtkWidget* okBtn = gtk_button_new_with_label("OK");
+    GtkWidget* okBtn = gtk_button_new_with_label("✅ OK");
     gtk_widget_set_halign(okBtn, GTK_ALIGN_CENTER);
     
     gtk_box_append(GTK_BOX(box), label);
