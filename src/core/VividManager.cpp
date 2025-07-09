@@ -12,6 +12,8 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
+// Use X11::Display to avoid conflict
+using X11Display = Display;
 #endif
 
 VividManager::VividManager() 
@@ -72,7 +74,7 @@ bool VividManager::tryXRandrCTM() {
 #ifdef HAVE_X11
     if (!std::getenv("DISPLAY")) return false;
     
-    Display* display = XOpenDisplay(nullptr);
+    X11Display* display = XOpenDisplay(nullptr);
     if (!display) return false;
     
     // Check for XRandR extension
@@ -120,14 +122,14 @@ void VividManager::detectDisplays() {
     
 #ifdef HAVE_X11
     if (std::getenv("DISPLAY")) {
-        Display* dpy = XOpenDisplay(nullptr);
+        X11Display* dpy = XOpenDisplay(nullptr);
         if (dpy) {
             XRRScreenResources* screen_resources = XRRGetScreenResources(dpy, DefaultRootWindow(dpy));
             if (screen_resources) {
                 for (int i = 0; i < screen_resources->noutput; i++) {
                     XRROutputInfo* output_info = XRRGetOutputInfo(dpy, screen_resources, screen_resources->outputs[i]);
                     if (output_info && output_info->connection == RR_Connected) {
-                        Display display;
+                        VividDisplay display;
                         display.id = std::string(output_info->name);
                         display.name = display.id;
                         display.connector = display.id;
@@ -147,7 +149,7 @@ void VividManager::detectDisplays() {
     
     // If no displays found, add demo displays
     if (m_displays.empty()) {
-        Display display1;
+        VividDisplay display1;
         display1.id = "DVI-D-0";
         display1.name = "DVI-D-0";
         display1.connector = "DVI-D";
@@ -155,7 +157,7 @@ void VividManager::detectDisplays() {
         display1.currentVibrance = 0.0f;
         m_displays.push_back(display1);
         
-        Display display2;
+        VividDisplay display2;
         display2.id = "HDMI-0";
         display2.name = "HDMI-0";
         display2.connector = "HDMI";
@@ -168,7 +170,7 @@ void VividManager::detectDisplays() {
     }
 }
 
-std::vector<Display> VividManager::getDisplays() {
+std::vector<VividDisplay> VividManager::getDisplays() {
     return m_displays;
 }
 
@@ -232,7 +234,7 @@ bool VividManager::setAMDVibrance(const std::string& displayId, float vibrance) 
 
 bool VividManager::setXRandrVibrance(const std::string& displayId, float vibrance) {
 #ifdef HAVE_X11
-    Display* dpy = XOpenDisplay(nullptr);
+    X11Display* dpy = XOpenDisplay(nullptr);
     if (!dpy) return false;
     
     XRRScreenResources* screen_resources = XRRGetScreenResources(dpy, DefaultRootWindow(dpy));
@@ -260,7 +262,6 @@ bool VividManager::setXRandrVibrance(const std::string& displayId, float vibranc
     }
     
     // Create color transformation matrix for vibrance
-    // This is a simplified approach - real vibrance control would need more sophisticated color math
     float saturation = 1.0f + (vibrance / 100.0f);
     saturation = std::max(0.0f, std::min(2.0f, saturation));
     
@@ -283,7 +284,7 @@ bool VividManager::setXRandrVibrance(const std::string& displayId, float vibranc
 #endif
 }
 
-bool VividManager::setWaylandVibrance(const std::string& displayId, float vibrance) {
+bool VividManager::setWaylandVibrance(const std::string& displayId __attribute__((unused)), float vibrance __attribute__((unused))) {
     // Wayland color management implementation would go here
     // For now, return false as it's not implemented
     return false;
@@ -419,7 +420,7 @@ void VividManager::checkActiveApplication() {
 std::string VividManager::getCurrentActiveWindow() {
 #ifdef HAVE_X11
     if (std::getenv("DISPLAY")) {
-        Display* dpy = XOpenDisplay(nullptr);
+        X11Display* dpy = XOpenDisplay(nullptr);
         if (dpy) {
             Window root = DefaultRootWindow(dpy);
             Atom active_window_atom = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);

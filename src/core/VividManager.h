@@ -5,7 +5,7 @@
 #include <string>
 #include <map>
 
-struct Display {
+struct VividDisplay {
     std::string id;
     std::string name;
     std::string connector;
@@ -36,7 +36,7 @@ public:
     
     // Core functionality
     bool initialize();
-    std::vector<Display> getDisplays();
+    std::vector<VividDisplay> getDisplays();
     bool setVibrance(const std::string& displayId, float vibrance); // -100 to +100
     float getVibrance(const std::string& displayId);
     bool resetVibrance(const std::string& displayId);
@@ -62,7 +62,7 @@ private:
     VibranceMethod m_currentMethod;
     bool m_initialized;
     bool m_monitoringEnabled;
-    std::vector<Display> m_displays;
+    std::vector<VividDisplay> m_displays;
     std::vector<AppProfile> m_profiles;
     std::map<std::string, float> m_baseVibrance; // Store original values
     

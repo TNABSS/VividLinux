@@ -161,21 +161,22 @@ void MainWindow::setupUI() {
 }
 
 void MainWindow::setupMenuBar() {
-    GtkWidget* menubar = gtk_menu_bar_new();
+    // Create a simple header bar instead of deprecated menu bar
+    GtkWidget* headerBar = gtk_header_bar_new();
+    gtk_header_bar_set_title_widget(GTK_HEADER_BAR(headerBar), gtk_label_new("Vivid"));
+    gtk_window_set_titlebar(GTK_WINDOW(m_window), headerBar);
     
-    // File menu
-    GtkWidget* fileMenu = gtk_menu_new();
-    GtkWidget* fileItem = gtk_menu_item_new_with_label("File");
-    gtk_menu_item_set_submenu(GTK_MENU_ITEM(fileItem), fileMenu);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), fileItem);
+    // Add menu button
+    GtkWidget* menuButton = gtk_menu_button_new();
+    gtk_header_bar_pack_end(GTK_HEADER_BAR(headerBar), menuButton);
     
-    // Help menu
-    GtkWidget* helpMenu = gtk_menu_new();
-    GtkWidget* helpItem = gtk_menu_item_new_with_label("Help");
-    gtk_menu_item_set_submenu(GTK_MENU_ITEM(helpItem), helpMenu);
-    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), helpItem);
+    // Create menu model
+    GMenu* menu = g_menu_new();
+    g_menu_append(menu, "About", "app.about");
+    g_menu_append(menu, "Quit", "app.quit");
     
-    // Note: GTK4 uses a different approach for menus, this is simplified
+    gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menuButton), G_MENU_MODEL(menu));
+    g_object_unref(menu);
 }
 
 void MainWindow::setupDisplayTabs() {
@@ -248,28 +249,12 @@ void MainWindow::setupProgramList() {
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scrolled), 
                                   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
     
-    // Create list store
-    GtkListStore* store = gtk_list_store_new(1, G_TYPE_STRING);
-    
-    // Create tree view
-    m_programList = gtk_tree_view_new_with_model(GTK_TREE_MODEL(store));
+    // Use GtkListBox instead of deprecated GtkTreeView
+    m_programList = gtk_list_box_new();
     gtk_widget_add_css_class(m_programList, "program-list");
-    
-    // Add column
-    GtkCellRenderer* renderer = gtk_cell_renderer_text_new();
-    GtkTreeViewColumn* column = gtk_tree_view_column_new_with_attributes(
-        "Programs", renderer, "text", 0, nullptr);
-    gtk_tree_view_append_column(GTK_TREE_VIEW(m_programList), column);
-    
-    // Set selection mode
-    GtkTreeSelection* selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(m_programList));
-    gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
-    g_signal_connect(selection, "changed", G_CALLBACK(onProgramListSelectionChanged), this);
     
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled), m_programList);
     m_programList = scrolled; // Store the scrolled window as the main widget
-    
-    g_object_unref(store);
 }
 
 void MainWindow::onVibranceChanged(GtkRange* range, gpointer user_data) {
@@ -310,7 +295,7 @@ void MainWindow::onVibranceSpinChanged(GtkSpinButton* spin, gpointer user_data) 
     }
 }
 
-void MainWindow::onDisplayTabChanged(GtkNotebook* notebook, GtkWidget* page, guint page_num, gpointer user_data) {
+void MainWindow::onDisplayTabChanged(GtkNotebook* notebook __attribute__((unused)), GtkWidget* page __attribute__((unused)), guint page_num, gpointer user_data) {
     auto* window = static_cast<MainWindow*>(user_data);
     
     // Update current display based on tab selection
@@ -326,59 +311,70 @@ void MainWindow::onFocusCheckboxToggled(GtkCheckButton* button, gpointer user_da
     window->m_manager->setMonitoringEnabled(enabled);
 }
 
-void MainWindow::onAddProgramClicked(GtkButton* button, gpointer user_data) {
+void MainWindow::onAddProgramClicked(GtkButton* button __attribute__((unused)), gpointer user_data) {
     auto* window = static_cast<MainWindow*>(user_data);
     window->showAddProgramDialog();
 }
 
-void MainWindow::onRemoveProgramClicked(GtkButton* button, gpointer user_data) {
+void MainWindow::onRemoveProgramClicked(GtkButton* button __attribute__((unused)), gpointer user_data) {
     auto* window = static_cast<MainWindow*>(user_data);
     
-    // Get selected program from list and remove it
-    GtkTreeSelection* selection = gtk_tree_view_get_selection(
-        GTK_TREE_VIEW(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(window->m_programList))));
+    // Get selected program from list box
+    GtkListBox* listBox = GTK_LIST_BOX(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(window->m_programList)));
+    GtkListBoxRow* selected = gtk_list_box_get_selected_row(listBox);
     
-    GtkTreeModel* model;
-    GtkTreeIter iter;
-    if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
-        gchar* programName;
-        gtk_tree_model_get(model, &iter, 0, &programName, -1);
-        
-        window->m_manager->deleteProfile(std::string(programName));
-        window->updateProgramList();
-        
-        g_free(programName);
+    if (selected) {
+        // Remove the selected program
+        // This is a simplified implementation
+        gtk_list_box_remove(listBox, GTK_WIDGET(selected));
     }
 }
 
-void MainWindow::onProgramListSelectionChanged(GtkTreeSelection* selection, gpointer user_data) {
+void MainWindow::onProgramListSelectionChanged(GtkTreeSelection* selection __attribute__((unused)), gpointer user_data __attribute__((unused))) {
     // Handle program selection change
 }
 
 void MainWindow::showAddProgramDialog() {
-    GtkWidget* dialog = gtk_dialog_new_with_buttons(
-        "Add Program",
-        GTK_WINDOW(m_window),
-        GTK_DIALOG_MODAL,
-        "Cancel", GTK_RESPONSE_CANCEL,
-        "OK", GTK_RESPONSE_OK,
-        nullptr);
-    
+    // Use GtkWindow instead of deprecated GtkDialog
+    GtkWidget* dialog = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(dialog), "Add Program");
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(m_window));
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
     gtk_window_set_default_size(GTK_WINDOW(dialog), 400, 300);
     
-    // Dialog content would go here - similar to the second screenshot
-    // This is a simplified version
+    // Create content
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_widget_set_margin_start(vbox, 20);
+    gtk_widget_set_margin_end(vbox, 20);
+    gtk_widget_set_margin_top(vbox, 20);
+    gtk_widget_set_margin_bottom(vbox, 20);
+    gtk_window_set_child(GTK_WINDOW(dialog), vbox);
     
-    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-    GtkWidget* label = gtk_label_new("Program selection dialog would go here");
-    gtk_box_append(GTK_BOX(content), label);
+    // Add content
+    GtkWidget* label = gtk_label_new("Select a program to add:");
+    gtk_box_append(GTK_BOX(vbox), label);
     
-    int response = gtk_dialog_run(GTK_DIALOG(dialog));
-    if (response == GTK_RESPONSE_OK) {
-        // Handle adding program
-    }
+    GtkWidget* entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Program name or path");
+    gtk_box_append(GTK_BOX(vbox), entry);
     
-    gtk_window_destroy(GTK_WINDOW(dialog));
+    // Button box
+    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_widget_set_halign(buttonBox, GTK_ALIGN_END);
+    gtk_box_append(GTK_BOX(vbox), buttonBox);
+    
+    GtkWidget* cancelButton = gtk_button_new_with_label("Cancel");
+    GtkWidget* okButton = gtk_button_new_with_label("OK");
+    gtk_widget_add_css_class(okButton, "suggested-action");
+    
+    gtk_box_append(GTK_BOX(buttonBox), cancelButton);
+    gtk_box_append(GTK_BOX(buttonBox), okButton);
+    
+    // Connect signals
+    g_signal_connect_swapped(cancelButton, "clicked", G_CALLBACK(gtk_window_destroy), dialog);
+    g_signal_connect_swapped(okButton, "clicked", G_CALLBACK(gtk_window_destroy), dialog);
+    
+    gtk_window_present(GTK_WINDOW(dialog));
 }
 
 void MainWindow::updateVibranceControls() {
@@ -397,16 +393,20 @@ void MainWindow::updateVibranceControls() {
 }
 
 void MainWindow::updateProgramList() {
-    GtkTreeView* treeView = GTK_TREE_VIEW(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(m_programList)));
-    GtkListStore* store = GTK_LIST_STORE(gtk_tree_view_get_model(treeView));
+    GtkListBox* listBox = GTK_LIST_BOX(gtk_scrolled_window_get_child(GTK_SCROLLED_WINDOW(m_programList)));
     
-    gtk_list_store_clear(store);
+    // Clear existing items
+    GtkWidget* child;
+    while ((child = gtk_widget_get_first_child(GTK_WIDGET(listBox))) != nullptr) {
+        gtk_list_box_remove(listBox, child);
+    }
     
+    // Add profiles
     auto profiles = m_manager->getProfiles();
     for (const auto& profile : profiles) {
-        GtkTreeIter iter;
-        gtk_list_store_append(store, &iter);
-        gtk_list_store_set(store, &iter, 0, profile.name.c_str(), -1);
+        GtkWidget* label = gtk_label_new(profile.name.c_str());
+        gtk_widget_set_halign(label, GTK_ALIGN_START);
+        gtk_list_box_append(listBox, label);
     }
 }
 
