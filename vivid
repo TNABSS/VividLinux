@@ -1,17 +1,27 @@
 #!/bin/bash
 
-# 🎮 VIVID - CLEAN LAUNCHER
-# ========================
-# Professional, minimal, works every time
+# 🎮 VIVID - BULLETPROOF LAUNCHER
+# ==============================
+# Always works, shows real errors, fixes permissions
 
 set -e
 
 GRAY='\033[0;37m'
 BOLD='\033[1;37m'
+RED='\033[0;31m'
+GREEN='\033[0;32m'
 NC='\033[0m'
 
 print_msg() {
     echo -e "${GRAY}$1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}"
 }
 
 print_header() {
@@ -20,14 +30,40 @@ print_header() {
     echo ""
 }
 
-# Auto-install dependencies silently
-auto_setup() {
-    print_msg "🔧 Setting up Vivid..."
+# Fix ALL permission issues automatically
+fix_permissions() {
+    print_msg "🔧 Fixing permissions..."
     
-    # Fix permissions
+    # Make this script executable
     chmod +x "$0" 2>/dev/null || true
     
-    # Check dependencies
+    # Fix any other scripts
+    find . -maxdepth 1 -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+    find . -maxdepth 1 -name "vivid" -exec chmod +x {} \; 2>/dev/null || true
+    find . -maxdepth 1 -name "run" -exec chmod +x {} \; 2>/dev/null || true
+    find . -maxdepth 1 -name "v" -exec chmod +x {} \; 2>/dev/null || true
+    
+    print_success "Permissions fixed"
+}
+
+# Check if we're in the right directory
+check_directory() {
+    if [ ! -f "meson.build" ]; then
+        print_error "Please run from VividLinux directory"
+        echo ""
+        echo "💡 How to fix:"
+        echo "   1. Download/extract VividLinux"
+        echo "   2. cd VividLinux-main"
+        echo "   3. chmod +x vivid"
+        echo "   4. ./vivid"
+        exit 1
+    fi
+}
+
+# Install dependencies with proper error handling
+install_dependencies() {
+    print_msg "📦 Checking dependencies..."
+    
     local missing=()
     command -v g++ >/dev/null || missing+=("compiler")
     command -v meson >/dev/null || missing+=("meson")
@@ -35,77 +71,199 @@ auto_setup() {
     pkg-config --exists gtk4 || missing+=("gtk4")
     command -v xrandr >/dev/null || missing+=("xrandr")
     
-    if [ ${#missing[@]} -gt 0 ]; then
-        print_msg "📦 Installing: ${missing[*]}"
-        
-        if [ -f /etc/fedora-release ]; then
-            sudo dnf install -y gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr >/dev/null 2>&1
-        elif [ -f /etc/debian_version ]; then
-            sudo apt update >/dev/null 2>&1
-            sudo apt install -y build-essential meson ninja-build pkg-config libgtk-4-dev libx11-dev libxrandr-dev x11-xserver-utils >/dev/null 2>&1
-        elif [ -f /etc/arch-release ]; then
-            sudo pacman -S --noconfirm base-devel meson ninja pkgconf gtk4 libx11 libxrandr xorg-xrandr >/dev/null 2>&1
-        fi
+    if [ ${#missing[@]} -eq 0 ]; then
+        print_success "All dependencies ready"
+        return 0
     fi
-}
-
-# Clean build
-build_vivid() {
-    print_msg "🔨 Building..."
     
-    rm -rf builddir
-    meson setup builddir --buildtype=release >/dev/null 2>&1
-    meson compile -C builddir >/dev/null 2>&1
+    print_msg "Missing: ${missing[*]}"
+    print_msg "Installing automatically..."
     
-    if [ -f "builddir/vivid" ]; then
-        print_msg "✅ Ready"
+    if [ -f /etc/fedora-release ]; then
+        print_msg "Detected Fedora - installing packages..."
+        if sudo dnf install -y gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr; then
+            print_success "Dependencies installed"
+        else
+            print_error "Failed to install dependencies"
+            echo "Try manually: sudo dnf install gcc-c++ meson ninja-build pkg-config gtk4-devel libX11-devel libXrandr-devel xrandr"
+            exit 1
+        fi
+    elif [ -f /etc/debian_version ]; then
+        print_msg "Detected Debian/Ubuntu - installing packages..."
+        sudo apt update
+        if sudo apt install -y build-essential meson ninja-build pkg-config libgtk-4-dev libx11-dev libxrandr-dev x11-xserver-utils; then
+            print_success "Dependencies installed"
+        else
+            print_error "Failed to install dependencies"
+            exit 1
+        fi
+    elif [ -f /etc/arch-release ]; then
+        print_msg "Detected Arch - installing packages..."
+        if sudo pacman -S --noconfirm base-devel meson ninja pkgconf gtk4 libx11 libxrandr xorg-xrandr; then
+            print_success "Dependencies installed"
+        else
+            print_error "Failed to install dependencies"
+            exit 1
+        fi
     else
-        print_msg "❌ Build failed"
+        print_error "Unsupported OS - please install dependencies manually"
+        echo ""
+        echo "Required packages:"
+        echo "  - C++ compiler (g++)"
+        echo "  - meson build system"
+        echo "  - ninja build tool"
+        echo "  - GTK4 development files"
+        echo "  - X11 development files"
+        echo "  - xrandr utility"
         exit 1
     fi
 }
 
-# Main logic
+# Build with full error output
+build_vivid() {
+    print_msg "🔨 Building Vivid..."
+    
+    # Clean previous build
+    rm -rf builddir
+    
+    # Configure with full error output
+    print_msg "Configuring build..."
+    if ! meson setup builddir --buildtype=release; then
+        print_error "Configuration failed"
+        echo ""
+        echo "This usually means missing dependencies."
+        echo "Try: ./vivid install-deps"
+        exit 1
+    fi
+    
+    # Build with full error output
+    print_msg "Compiling..."
+    if ! meson compile -C builddir; then
+        print_error "Compilation failed"
+        echo ""
+        echo "Build errors shown above. Common fixes:"
+        echo "  1. Install missing dependencies: ./vivid install-deps"
+        echo "  2. Update your system packages"
+        echo "  3. Check if you have enough disk space"
+        exit 1
+    fi
+    
+    # Verify build
+    if [ -f "builddir/vivid" ] && [ -x "builddir/vivid" ]; then
+        print_success "Build successful!"
+        
+        # Test the binary
+        if ./builddir/vivid --help >/dev/null 2>&1; then
+            print_success "Vivid is working correctly"
+        else
+            print_error "Build completed but binary doesn't work"
+            exit 1
+        fi
+    else
+        print_error "Build failed - executable not created"
+        exit 1
+    fi
+}
+
+# Show help
+show_help() {
+    print_header
+    echo "USAGE:"
+    echo "  ./vivid                    - Setup and launch GUI"
+    echo "  ./vivid build             - Build only"
+    echo "  ./vivid gui               - Launch GUI (build if needed)"
+    echo "  ./vivid install-deps      - Install dependencies only"
+    echo "  ./vivid clean             - Clean build files"
+    echo "  ./vivid install           - Install system-wide"
+    echo "  ./vivid fix               - Fix permissions"
+    echo "  ./vivid help              - Show this help"
+    echo ""
+    echo "CLI COMMANDS (after building):"
+    echo "  ./builddir/vivid --list                    - List displays"
+    echo "  ./builddir/vivid --set <display> <value>   - Set vibrance"
+    echo "  ./builddir/vivid --reset-all               - Reset all"
+    echo ""
+    echo "EXAMPLES:"
+    echo "  ./vivid                                    - Full setup & launch"
+    echo "  ./builddir/vivid --set HDMI-A-1 50        - Set HDMI to +50"
+    echo "  ./builddir/vivid --reset-all               - Reset everything"
+}
+
+# Main command handling
 case "${1:-}" in
     "build")
         print_header
-        auto_setup
+        fix_permissions
+        check_directory
+        install_dependencies
         build_vivid
+        ;;
+    "gui")
+        fix_permissions
+        check_directory
+        if [ ! -f "builddir/vivid" ]; then
+            print_header
+            install_dependencies
+            build_vivid
+        fi
+        print_msg "🚀 Launching Vivid GUI..."
+        exec ./builddir/vivid
+        ;;
+    "install-deps")
+        print_header
+        fix_permissions
+        check_directory
+        install_dependencies
         ;;
     "clean")
         rm -rf builddir
-        print_msg "✅ Cleaned"
+        print_success "Build files cleaned"
         ;;
     "install")
         if [ ! -f "builddir/vivid" ]; then
-            print_msg "❌ Build first: ./vivid build"
+            print_error "Build first: ./vivid build"
             exit 1
         fi
-        sudo meson install -C builddir
-        print_msg "✅ Installed system-wide"
+        print_msg "📦 Installing system-wide..."
+        if sudo meson install -C builddir; then
+            print_success "Vivid installed system-wide!"
+            echo "You can now run 'vivid' from anywhere"
+        else
+            print_error "Installation failed"
+            exit 1
+        fi
+        ;;
+    "fix")
+        fix_permissions
+        print_success "Permissions fixed"
+        ;;
+    "help"|"--help"|"-h")
+        show_help
         ;;
     "")
-        # Auto-setup and launch
-        if [ ! -f "meson.build" ]; then
-            print_msg "❌ Run from VividLinux directory"
-            exit 1
-        fi
-        
+        # Default: full setup and launch
         print_header
-        auto_setup
+        fix_permissions
+        check_directory
         
-        if [ ! -f "builddir/vivid" ]; then
+        # Check if already built and working
+        if [ -f "builddir/vivid" ] && ./builddir/vivid --help >/dev/null 2>&1; then
+            print_success "Vivid already built and ready"
+        else
+            install_dependencies
             build_vivid
         fi
         
-        print_msg "🚀 Launching Vivid..."
+        print_msg "🚀 Launching Vivid GUI..."
         exec ./builddir/vivid
         ;;
     *)
+        # Pass through to built binary if it exists
         if [ -f "builddir/vivid" ]; then
             exec ./builddir/vivid "$@"
         else
-            print_msg "❌ Build first: ./vivid build"
+            print_error "Unknown command: $1"
+            echo "Run './vivid help' for usage"
             exit 1
         fi
         ;;
