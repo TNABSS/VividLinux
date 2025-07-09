@@ -1,7 +1,7 @@
 #include "MainWindow.h"
 #include <iostream>
 #include <filesystem>
-#include <functional>
+#include <functional>  // FIXED: Added missing include
 
 MainWindow::MainWindow(GtkApplication* app) {
     m_controller = std::make_unique<VibranceController>();
@@ -20,7 +20,6 @@ MainWindow::~MainWindow() = default;
 void MainWindow::applyGrayTheme() {
     GtkCssProvider* provider = gtk_css_provider_new();
     
-    // Professional gray theme - minimal and clean
     const char* css = R"(
         window {
             background-color: #2d2d2d;
@@ -147,7 +146,6 @@ void MainWindow::setupUI() {
     gtk_widget_add_css_class(m_mainBox, "main-container");
     gtk_window_set_child(GTK_WINDOW(m_window), m_mainBox);
     
-    // Display controls
     setupDisplayControls();
     
     // Button section
@@ -155,17 +153,14 @@ void MainWindow::setupUI() {
     gtk_widget_add_css_class(buttonBox, "button-box");
     gtk_widget_set_halign(buttonBox, GTK_ALIGN_CENTER);
     
-    // Apply button (universal)
     m_applyButton = gtk_button_new_with_label("Apply to All");
     gtk_widget_add_css_class(m_applyButton, "apply-button");
     g_signal_connect(m_applyButton, "clicked", G_CALLBACK(onApplyClicked), this);
     
-    // Install system-wide button
     m_installButton = gtk_button_new_with_label("Set System Wide");
     gtk_widget_add_css_class(m_installButton, "install-button");
     g_signal_connect(m_installButton, "clicked", G_CALLBACK(onInstallClicked), this);
     
-    // Reset button
     m_resetButton = gtk_button_new_with_label("Reset All");
     gtk_widget_add_css_class(m_resetButton, "reset-button");
     g_signal_connect(m_resetButton, "clicked", G_CALLBACK(onResetClicked), this);
@@ -181,32 +176,26 @@ void MainWindow::setupDisplayControls() {
     auto displays = m_controller->getDisplays();
     
     for (const auto& display : displays) {
-        // Display section
         GtkWidget* displaySection = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
         gtk_widget_add_css_class(displaySection, "display-section");
         
-        // Title
         std::string titleText = "Display: " + display.id;
         GtkWidget* titleLabel = gtk_label_new(titleText.c_str());
         gtk_widget_add_css_class(titleLabel, "display-title");
         gtk_widget_set_halign(titleLabel, GTK_ALIGN_START);
         
-        // Value label
         GtkWidget* valueLabel = gtk_label_new("Normal (0)");
         gtk_widget_add_css_class(valueLabel, "value-label");
         m_valueLabels[display.id] = valueLabel;
         
-        // Vibrance slider
         GtkWidget* vibranceScale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, -100.0, 100.0, 1.0);
         gtk_scale_set_draw_value(GTK_SCALE(vibranceScale), FALSE);
         gtk_range_set_value(GTK_RANGE(vibranceScale), display.currentVibrance);
         
-        // Add marks
         gtk_scale_add_mark(GTK_SCALE(vibranceScale), -100.0, GTK_POS_BOTTOM, "-100");
         gtk_scale_add_mark(GTK_SCALE(vibranceScale), 0.0, GTK_POS_BOTTOM, "0");
         gtk_scale_add_mark(GTK_SCALE(vibranceScale), 100.0, GTK_POS_BOTTOM, "+100");
         
-        // Store reference and connect signal
         m_vibranceScales[display.id] = vibranceScale;
         g_object_set_data(G_OBJECT(vibranceScale), "display_id", g_strdup(display.id.c_str()));
         g_signal_connect(vibranceScale, "value-changed", G_CALLBACK(onVibranceChanged), this);
@@ -245,7 +234,6 @@ void MainWindow::onVibranceChanged(GtkRange* range, gpointer user_data) {
     double value = gtk_range_get_value(range);
     int vibrance = static_cast<int>(value);
     
-    // Apply immediately for real-time feedback
     window->m_controller->setVibrance(displayId, vibrance);
     window->updateValueLabel(displayId, vibrance);
 }
@@ -290,7 +278,6 @@ void MainWindow::onResetClicked(GtkButton* button __attribute__((unused)), gpoin
         [window]() {
             window->m_controller->resetAllDisplays();
             
-            // Update UI
             for (const auto& pair : window->m_vibranceScales) {
                 gtk_range_set_value(GTK_RANGE(pair.second), 0.0);
                 window->updateValueLabel(pair.first, 0);
@@ -302,7 +289,6 @@ void MainWindow::onResetClicked(GtkButton* button __attribute__((unused)), gpoin
 }
 
 void MainWindow::applyAllSettings() {
-    // Apply current slider values to all displays
     for (const auto& pair : m_vibranceScales) {
         double value = gtk_range_get_value(GTK_RANGE(pair.second));
         int vibrance = static_cast<int>(value);
@@ -310,58 +296,84 @@ void MainWindow::applyAllSettings() {
     }
 }
 
+// FIXED: Modern GTK4 dialogs without deprecated functions
 void MainWindow::showConfirmDialog(const std::string& message, std::function<void()> callback) {
-    GtkWidget* dialog = gtk_dialog_new_with_buttons(
-        "Confirm",
-        GTK_WINDOW(m_window),
-        GTK_DIALOG_MODAL,
-        "Cancel", GTK_RESPONSE_CANCEL,
-        "OK", GTK_RESPONSE_OK,
-        NULL
-    );
+    GtkWidget* dialog = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(dialog), "Confirm");
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(m_window));
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 300, 150);
     
-    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+    gtk_widget_set_margin_start(box, 20);
+    gtk_widget_set_margin_end(box, 20);
+    gtk_widget_set_margin_top(box, 20);
+    gtk_widget_set_margin_bottom(box, 20);
+    
     GtkWidget* label = gtk_label_new(message.c_str());
     gtk_label_set_wrap(GTK_LABEL(label), TRUE);
-    gtk_widget_set_margin_start(label, 20);
-    gtk_widget_set_margin_end(label, 20);
-    gtk_widget_set_margin_top(label, 20);
-    gtk_widget_set_margin_bottom(label, 20);
     
-    gtk_box_append(GTK_BOX(content), label);
+    GtkWidget* buttonBox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    gtk_widget_set_halign(buttonBox, GTK_ALIGN_CENTER);
     
-    g_signal_connect(dialog, "response", G_CALLBACK([](GtkDialog* dialog, gint response, gpointer user_data) {
-        auto callback = static_cast<std::function<void()>*>(user_data);
-        if (response == GTK_RESPONSE_OK && callback) {
-            (*callback)();
-        }
-        gtk_window_destroy(GTK_WINDOW(dialog));
-        delete callback;
-    }), new std::function<void()>(callback));
+    GtkWidget* cancelBtn = gtk_button_new_with_label("Cancel");
+    GtkWidget* okBtn = gtk_button_new_with_label("OK");
+    
+    gtk_box_append(GTK_BOX(buttonBox), cancelBtn);
+    gtk_box_append(GTK_BOX(buttonBox), okBtn);
+    
+    gtk_box_append(GTK_BOX(box), label);
+    gtk_box_append(GTK_BOX(box), buttonBox);
+    
+    gtk_window_set_child(GTK_WINDOW(dialog), box);
+    
+    // Store callback
+    auto* callbackPtr = new std::function<void()>(callback);
+    g_object_set_data_full(G_OBJECT(dialog), "callback", callbackPtr, [](gpointer data) {
+        delete static_cast<std::function<void()>*>(data);
+    });
+    
+    g_signal_connect(cancelBtn, "clicked", G_CALLBACK([](GtkButton*, gpointer data) {
+        gtk_window_destroy(GTK_WINDOW(data));
+    }), dialog);
+    
+    g_signal_connect(okBtn, "clicked", G_CALLBACK([](GtkButton*, gpointer data) {
+        auto* callbackPtr = static_cast<std::function<void()>*>(g_object_get_data(G_OBJECT(data), "callback"));
+        if (callbackPtr) (*callbackPtr)();
+        gtk_window_destroy(GTK_WINDOW(data));
+    }), dialog);
     
     gtk_window_present(GTK_WINDOW(dialog));
 }
 
 void MainWindow::showInfoDialog(const std::string& message) {
-    GtkWidget* dialog = gtk_dialog_new_with_buttons(
-        "Information",
-        GTK_WINDOW(m_window),
-        GTK_DIALOG_MODAL,
-        "OK", GTK_RESPONSE_OK,
-        NULL
-    );
+    GtkWidget* dialog = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(dialog), "Information");
+    gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+    gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(m_window));
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 300, 120);
     
-    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    GtkWidget* box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+    gtk_widget_set_margin_start(box, 20);
+    gtk_widget_set_margin_end(box, 20);
+    gtk_widget_set_margin_top(box, 20);
+    gtk_widget_set_margin_bottom(box, 20);
+    
     GtkWidget* label = gtk_label_new(message.c_str());
     gtk_label_set_wrap(GTK_LABEL(label), TRUE);
-    gtk_widget_set_margin_start(label, 20);
-    gtk_widget_set_margin_end(label, 20);
-    gtk_widget_set_margin_top(label, 20);
-    gtk_widget_set_margin_bottom(label, 20);
     
-    gtk_box_append(GTK_BOX(content), label);
+    GtkWidget* okBtn = gtk_button_new_with_label("OK");
+    gtk_widget_set_halign(okBtn, GTK_ALIGN_CENTER);
     
-    g_signal_connect(dialog, "response", G_CALLBACK(gtk_window_destroy), NULL);
+    gtk_box_append(GTK_BOX(box), label);
+    gtk_box_append(GTK_BOX(box), okBtn);
+    
+    gtk_window_set_child(GTK_WINDOW(dialog), box);
+    
+    g_signal_connect(okBtn, "clicked", G_CALLBACK([](GtkButton*, gpointer data) {
+        gtk_window_destroy(GTK_WINDOW(data));
+    }), dialog);
+    
     gtk_window_present(GTK_WINDOW(dialog));
 }
 

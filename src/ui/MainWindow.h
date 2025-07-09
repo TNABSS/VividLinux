@@ -2,6 +2,7 @@
 #include <gtk/gtk.h>
 #include <memory>
 #include <map>
+#include <functional>  // FIXED: Added missing include
 #include "../core/VibranceController.h"
 
 class MainWindow {
@@ -37,7 +38,7 @@ private:
     
     // Helpers
     void updateValueLabel(const std::string& displayId, int vibrance);
-    void showConfirmDialog(const std::string& message, std::function<void()> callback);
+    void showConfirmDialog(const std::string& message, std::function<void()> callback);  // FIXED: Now properly declared
     void showInfoDialog(const std::string& message);
     void applyAllSettings();
 };
