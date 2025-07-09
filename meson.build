@@ -8,7 +8,7 @@ x11_dep = dependency('x11', required: false)
 xrandr_dep = dependency('xrandr', required: false)
 threads_dep = dependency('threads')
 
-# Source files - Updated to match new structure
+# Source files
 sources = [
   'src/main.cpp',
   'src/core/VibranceController.cpp',
@@ -37,5 +37,3 @@ executable('vivid',
   install: true)
 
 message('Build configured successfully!')
-message('Run: meson compile -C builddir')
-message('Then: ./builddir/vivid')

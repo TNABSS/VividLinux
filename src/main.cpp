@@ -13,24 +13,18 @@ static void activate(GtkApplication* app, gpointer user_data __attribute__((unus
 }
 
 void print_help() {
-    std::cout << "🎮 Vivid - Digital Vibrance Control for Linux\n\n";
+    std::cout << "Vivid - Digital Vibrance Control\n\n";
     std::cout << "USAGE:\n";
     std::cout << "  vivid                                    Launch GUI\n";
     std::cout << "  vivid --list                            List displays\n";
     std::cout << "  vivid --set <display> <vibrance>        Set vibrance (-100 to +100)\n";
-    std::cout << "  vivid --reset <display>                 Reset display to normal\n";
+    std::cout << "  vivid --reset <display>                 Reset display\n";
     std::cout << "  vivid --reset-all                       Reset all displays\n";
     std::cout << "  vivid --status                          Show current settings\n\n";
     std::cout << "EXAMPLES:\n";
-    std::cout << "  vivid --set DVI-D-0 50                  Make DVI display more vibrant\n";
-    std::cout << "  vivid --set HDMI-0 -30                  Make HDMI display less vibrant\n";
-    std::cout << "  vivid --reset DVI-D-0                   Reset DVI to normal\n\n";
-    std::cout << "VIBRANCE VALUES:\n";
-    std::cout << "  -100  Completely desaturated (grayscale)\n";
-    std::cout << "     0  Normal colors (default)\n";
-    std::cout << "  +100  Maximum vibrance (oversaturated)\n\n";
-    std::cout << "The GUI provides an easy way to adjust settings and create\n";
-    std::cout << "per-application profiles for automatic vibrance switching.\n";
+    std::cout << "  vivid --set HDMI-A-1 50                 Enhance HDMI display\n";
+    std::cout << "  vivid --set eDP-1 -30                   Reduce laptop display\n";
+    std::cout << "  vivid --reset-all                       Reset everything\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -48,7 +42,7 @@ int main(int argc, char* argv[]) {
         
         if (command == "--list") {
             auto displays = controller.getDisplays();
-            std::cout << "📺 Available displays:\n";
+            std::cout << "Available displays:\n";
             for (const auto& display : displays) {
                 std::cout << "  " << display.id << " (vibrance: " << display.currentVibrance << ")\n";
             }
@@ -57,15 +51,10 @@ int main(int argc, char* argv[]) {
         
         if (command == "--status") {
             auto displays = controller.getDisplays();
-            std::cout << "🎮 Vivid Status:\n";
-            std::cout << "  Focus mode: " << (controller.getFocusMode() ? "enabled" : "disabled") << "\n";
-            std::cout << "  Displays:\n";
+            std::cout << "Vivid Status:\n";
             for (const auto& display : displays) {
-                std::cout << "    " << display.id << ": " << display.currentVibrance << "\n";
+                std::cout << "  " << display.id << ": " << display.currentVibrance << "\n";
             }
-            
-            auto profiles = controller.getProfiles();
-            std::cout << "  Profiles: " << profiles.size() << " configured\n";
             return 0;
         }
         
@@ -85,7 +74,7 @@ int main(int argc, char* argv[]) {
         if (command == "--reset" && argc >= 3) {
             std::string displayId = argv[2];
             
-            if (controller.resetDisplay(displayId)) {
+            if (controller.setVibrance(displayId, 0)) {
                 std::cout << "✅ Reset " << displayId << " to normal\n";
             } else {
                 std::cout << "❌ Failed to reset " << displayId << "\n";
@@ -95,16 +84,7 @@ int main(int argc, char* argv[]) {
         }
         
         if (command == "--reset-all") {
-            auto displays = controller.getDisplays();
-            bool success = true;
-            
-            for (const auto& display : displays) {
-                if (!controller.resetDisplay(display.id)) {
-                    success = false;
-                }
-            }
-            
-            if (success) {
+            if (controller.resetAllDisplays()) {
                 std::cout << "✅ Reset all displays to normal\n";
             } else {
                 std::cout << "❌ Failed to reset some displays\n";
